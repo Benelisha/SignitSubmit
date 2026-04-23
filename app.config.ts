@@ -1,4 +1,4 @@
-import { ExpoConfig, ConfigContext } from "@expo/config"
+import type { ExpoConfig } from "expo/config"
 
 /**
  * Use tsx/cjs here so we can use TypeScript for our Config Plugins
@@ -14,7 +14,7 @@ import "tsx/cjs"
  * You can read more about Expo's Configuration Resolution Rules here:
  * https://docs.expo.dev/workflow/configuration/#configuration-resolution-rules
  */
-module.exports = ({ config }: ConfigContext): Partial<ExpoConfig> => {
+export default ({ config }: { config: ExpoConfig }): Partial<ExpoConfig> => {
   const existingPlugins = config.plugins ?? []
 
   return {

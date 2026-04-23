@@ -1,4 +1,4 @@
-import { ReactElement } from "react"
+import { ReactElement, ReactNode } from "react"
 import {
   StyleProp,
   TextStyle,
@@ -17,6 +17,8 @@ import { ExtendedEdge, useSafeAreaInsetsStyle } from "@/utils/useSafeAreaInsetsS
 
 import { IconTypes, PressableIcon } from "./Icon"
 import { Text, TextProps } from "./Text"
+
+type HeaderTitleComponent = ReactNode | (() => ReactNode)
 
 export interface HeaderProps {
   /**
@@ -53,6 +55,11 @@ export interface HeaderProps {
    * Title text which is looked up via i18n.
    */
   titleTx?: TextProps["tx"]
+  /**
+   * Optional custom content to render in the title area.
+   * When provided, this takes precedence over `title` and `titleTx`.
+   */
+  titleComponent?: HeaderTitleComponent
   /**
    * Optional options to pass to i18n. Useful for interpolation
    * as well as explicitly setting locale or translation fallbacks.
@@ -171,6 +178,7 @@ export function Header(props: HeaderProps) {
     rightTxOptions,
     safeAreaEdges = ["top"],
     title,
+    titleComponent,
     titleMode = "center",
     titleTx,
     titleTxOptions,
@@ -183,6 +191,8 @@ export function Header(props: HeaderProps) {
   const $containerInsets = useSafeAreaInsetsStyle(safeAreaEdges)
 
   const titleContent = titleTx ? translate(titleTx, titleTxOptions) : title
+  const renderedTitle =
+    typeof titleComponent === "function" ? titleComponent() : (titleComponent ?? titleContent)
 
   return (
     <View style={[$container, $containerInsets, { backgroundColor }, $containerStyleOverride]}>
@@ -198,7 +208,7 @@ export function Header(props: HeaderProps) {
           ActionComponent={LeftActionComponent}
         />
 
-        {!!titleContent && (
+        {!!renderedTitle && (
           <View
             style={[
               $titleWrapperPointerEvents,
@@ -207,12 +217,16 @@ export function Header(props: HeaderProps) {
               $titleContainerStyleOverride,
             ]}
           >
-            <Text
-              weight="medium"
-              size="md"
-              text={titleContent}
-              style={[$title, $titleStyleOverride]}
-            />
+            {titleComponent ? (
+              renderedTitle
+            ) : (
+              <Text
+                weight="medium"
+                size="md"
+                text={titleContent}
+                style={[$title, $titleStyleOverride]}
+              />
+            )}
           </View>
         )}
 
@@ -320,9 +334,10 @@ const $titleWrapperCenter: ThemedStyle<ViewStyle> = ({ spacing }) => ({
   alignItems: "center",
   justifyContent: "center",
   height: "100%",
-  width: "100%",
   position: "absolute",
-  paddingHorizontal: spacing.xxl,
+  left: spacing.xxl,
+  right: 0,
+  overflow: "hidden",
   zIndex: 1,
 })
 

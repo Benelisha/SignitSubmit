@@ -1,71 +1,59 @@
-// TODO: write documentation about fonts and typography along with guides on how to add custom fonts in own
-// markdown file and add links from here
-
-import { Platform } from "react-native"
 import {
-  SpaceGrotesk_300Light as spaceGroteskLight,
-  SpaceGrotesk_400Regular as spaceGroteskRegular,
-  SpaceGrotesk_500Medium as spaceGroteskMedium,
-  SpaceGrotesk_600SemiBold as spaceGroteskSemiBold,
-  SpaceGrotesk_700Bold as spaceGroteskBold,
-} from "@expo-google-fonts/space-grotesk"
+  Nunito_300Light as nunitoLight,
+  Nunito_400Regular as nunitoRegular,
+  Nunito_500Medium as nunitoMedium,
+  Nunito_600SemiBold as nunitoSemiBold,
+  Nunito_700Bold as nunitoBold,
+} from "@expo-google-fonts/nunito"
+import {
+  Roboto_400Regular as robotoRegular,
+  Roboto_500Medium as robotoMedium,
+  Roboto_700Bold as robotoBold,
+} from "@expo-google-fonts/roboto"
 
 export const customFontsToLoad = {
-  spaceGroteskLight,
-  spaceGroteskRegular,
-  spaceGroteskMedium,
-  spaceGroteskSemiBold,
-  spaceGroteskBold,
+  nunitoLight,
+  nunitoRegular,
+  nunitoMedium,
+  nunitoSemiBold,
+  nunitoBold,
+  robotoRegular,
+  robotoMedium,
+  robotoBold,
 }
 
 const fonts = {
-  spaceGrotesk: {
-    // Cross-platform Google font.
-    light: "spaceGroteskLight",
-    normal: "spaceGroteskRegular",
-    medium: "spaceGroteskMedium",
-    semiBold: "spaceGroteskSemiBold",
-    bold: "spaceGroteskBold",
+  nunito: {
+    light: "nunitoLight",
+    normal: "nunitoRegular",
+    medium: "nunitoMedium",
+    semiBold: "nunitoSemiBold",
+    bold: "nunitoBold",
   },
-  helveticaNeue: {
-    // iOS only font.
-    thin: "HelveticaNeue-Thin",
-    light: "HelveticaNeue-Light",
-    normal: "Helvetica Neue",
-    medium: "HelveticaNeue-Medium",
-  },
-  courier: {
-    // iOS only font.
-    normal: "Courier",
-  },
-  sansSerif: {
-    // Android only font.
-    thin: "sans-serif-thin",
-    light: "sans-serif-light",
-    normal: "sans-serif",
-    medium: "sans-serif-medium",
-  },
-  monospace: {
-    // Android only font.
-    normal: "monospace",
+  roboto: {
+    normal: "robotoRegular",
+    medium: "robotoMedium",
+    bold: "robotoBold",
   },
 }
 
 export const typography = {
-  /**
-   * The fonts are available to use, but prefer using the semantic name.
-   */
   fonts,
+  sizes: {
+    xxl: { fontSize: 34, lineHeight: 40 },
+    xl: { fontSize: 28, lineHeight: 34 },
+    lg: { fontSize: 22, lineHeight: 28 },
+    md: { fontSize: 18, lineHeight: 24 },
+    sm: { fontSize: 16, lineHeight: 22 },
+    xs: { fontSize: 14, lineHeight: 20 },
+    xxs: { fontSize: 12, lineHeight: 16 },
+  },
   /**
    * The primary font. Used in most places.
    */
-  primary: fonts.spaceGrotesk,
+  primary: fonts.nunito,
   /**
-   * An alternate font used for perhaps titles and stuff.
+   * Fallback font.
    */
-  secondary: Platform.select({ ios: fonts.helveticaNeue, android: fonts.sansSerif }),
-  /**
-   * Lets get fancy with a monospace font!
-   */
-  code: Platform.select({ ios: fonts.courier, android: fonts.monospace }),
+  secondary: fonts.roboto,
 }
