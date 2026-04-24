@@ -12,12 +12,12 @@ import Svg, { Circle, Path, Rect } from "react-native-svg"
 const AnimatedPath = Animated.createAnimatedComponent(Path)
 const AnimatedCircle = Animated.createAnimatedComponent(Circle)
 
-const VIEWBOX_WIDTH = 343
-const VIEWBOX_HEIGHT = 235
+export const CHART_VIEWBOX_WIDTH = 343
+export const CHART_VIEWBOX_HEIGHT = 235
 export const CHART_PATH_START_DELAY = 120
-export const CHART_PATH_ANIMATION_DURATION = 2400
-export const CHART_BUBBLE_REVEAL_INTERVAL = 280
-export const CHART_BUBBLE_REVEAL_OFFSET = 360
+export const CHART_PATH_ANIMATION_DURATION = 1800
+export const CHART_BUBBLE_REVEAL_INTERVAL = 320
+export const CHART_BUBBLE_REVEAL_OFFSET = 400
 const CIRCLE_APPEAR_DURATION = 220
 const PATH_DASH_LENGTH = 1000
 const CURVE_PATH = "M18.6 187.031c12.146-18.148 26.356-27.551 48.262-34.293 21.905-6.743 54.128 2.557 67.895-9.319 13.767-11.877 21.82-20.621 39.7-29.526 17.879-8.905 43.859 2.357 65.553-8.448 21.694-10.806 19.51-44.103 74.774-44.103"
@@ -70,7 +70,7 @@ interface ChartBGProps {
 }
 
 function ChartBG({ style, onPointsLayout }: ChartBGProps) {
-  const [size, setSize] = useState({ width: VIEWBOX_WIDTH, height: VIEWBOX_HEIGHT })
+  const [size, setSize] = useState({ width: CHART_VIEWBOX_WIDTH, height: CHART_VIEWBOX_HEIGHT })
   const pathProgress = useSharedValue(0)
   const circleVisibility = CIRCLE_POINTS.map(() => useSharedValue(0))
 
@@ -84,7 +84,8 @@ function ChartBG({ style, onPointsLayout }: ChartBGProps) {
       CHART_PATH_START_DELAY,
       withTiming(1, {
         duration: CHART_PATH_ANIMATION_DURATION,
-        easing: Easing.bezier(0.33, 0.08, 0.22, 1),
+        // easing: Easing.bezier(0.33, 0.08, 0.22, 1),
+        easing: Easing.bezier(0.33, 0.08, 0.22, 0.6),
       }),
     )
 
@@ -120,8 +121,8 @@ function ChartBG({ style, onPointsLayout }: ChartBGProps) {
     onPointsLayout?.(
       CIRCLE_POINTS.map((point) => ({
         id: point.id,
-        x: (point.cx / VIEWBOX_WIDTH) * size.width,
-        y: (point.cy / VIEWBOX_HEIGHT) * size.height,
+        x: (point.cx / CHART_VIEWBOX_WIDTH) * size.width,
+        y: (point.cy / CHART_VIEWBOX_HEIGHT) * size.height,
       })),
     )
   }, [onPointsLayout, size.height, size.width])
@@ -141,7 +142,7 @@ function ChartBG({ style, onPointsLayout }: ChartBGProps) {
     <Svg
       width="100%"
       height="100%"
-      viewBox={`0 0 ${VIEWBOX_WIDTH} ${VIEWBOX_HEIGHT}`}
+      viewBox={`0 0 ${CHART_VIEWBOX_WIDTH} ${CHART_VIEWBOX_HEIGHT}`}
       fill="none"
       onLayout={handleLayout}
       style={style}

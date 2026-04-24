@@ -20,6 +20,7 @@ interface ChartBubbleProps {
     arrowPosition?: ChartBubbleArrowPosition
     arrowTranslateX?: number
     arrowTranslateY?: number
+    textColor?: string
 }
 
 export function ChartBubble({
@@ -28,6 +29,7 @@ export function ChartBubble({
     arrowPosition = "left",
     arrowTranslateX = 0,
     arrowTranslateY = 0,
+    textColor = "#999999",
 }: ChartBubbleProps) {
     const { themed } = useAppTheme()
 
@@ -35,7 +37,7 @@ export function ChartBubble({
         <FloatingAnimation mode="vertical" size={4}>
             <View style={[themed($bubble), style]}>
                 <FadeInFadeOut inDelay={120} inDuration={260}>
-                    <Text text={text} style={themed($text)} />
+                    <Text text={text} style={[themed($text), { color: textColor }]} />
                 </FadeInFadeOut>
                 <View style={[$arrowBase, getArrowStyle(arrowPosition, arrowTranslateX, arrowTranslateY)]}>
                     <BubbleArrow width="100%" height="100%" />
@@ -65,12 +67,14 @@ const $bubble = (_theme: Theme): ViewStyle => ({
 })
 
 const $text = (theme: Theme): TextStyle => ({
-    fontFamily: theme.typography.primary.medium,
-    fontSize: theme.typography.sizes.md.fontSize + 2,
-    lineHeight: theme.typography.sizes.xxl.fontSize,
-    color: theme.colors.talkBubbleText,
+    fontFamily: theme.typography.primary.bold,
+    fontSize: theme.typography.sizes.xxs.fontSize,
+    lineHeight: theme.typography.sizes.xxs.lineHeight,
     letterSpacing: 0,
+    textAlign: "center",
     textAlignVertical: "center",
+    textTransform: "uppercase",
+    fontVariant: ["lining-nums", "proportional-nums"],
 })
 
 const $arrowBase: ViewStyle = {
