@@ -27,55 +27,44 @@ export function StepsScreen() {
 function StepsScreenContent() {
   const { themed } = useAppTheme()
   const navigationRef = useRef<StepsNavigationRef>(null)
-  const { isLoading, data, activeStepId } = useStepContext()
+  const { isLoading, data, activeStepId, responses } = useStepContext()
   const { lang } = useLang()
 
-
-  // const [currentIndex, setCurrentIndex] = useState(0)
-  // const isLastStep = currentIndex === STEPS.length - 1
-  // const progressByStep = [30, 65]
-  // const progress = progressByStep[currentIndex] ?? 0
-  // if (!isLoading) {
-  //   console.log("Data loaded:", data, activeStepId)
-  // }
   const handleNext = () => {
-    // if (!navigationRef.current?.isReady()) return
-
-    // if (currentIndex === 0) {
-    //   navigationRef.current.navigate(STEPS[1].id)
-    //   return
-    // }
-
-    // navigationRef.current.dispatch(
-    //   CommonActions.reset({
-    //     index: 0,
-    //     routes: [{ name: STEPS[0].id }],
-    //   }),
-    // )
+    const isFirstStep = activeStepId === data?.steps?.[0]?.id;
+    // move to next
+    if (isFirstStep && navigationRef.current?.isReady()) {
+      navigationRef.current.navigate("step-2")
+    }
   }
 
   const handleBack = () => {
-    // if (!navigationRef.current?.isReady() || currentIndex === 0) return
-    // navigationRef.current.goBack()
+    if (!navigationRef.current?.isReady() || activeStepId === data?.steps?.[0]?.id) return
+    navigationRef.current.goBack()
   }
 
   const actionButtonText = isLoading ? "LOADING" : data?.defaults?.ctaText[lang] || "LOADING";
   const activeStepData = data?.steps.find(step => step.id === activeStepId);
+  const canContinue =
+    // no data or no options means nothing to answer, so allow continue
+    !activeStepData || activeStepData.options.length === 0 ||
+    // Is Step has response
+    responses?.responses.some(r => r.stepId === activeStepId)
 
   return (
     <View style={$container}>
-      
+
       <StepsHeader
         showBackButton
         progress={10}
         onBackPress={handleBack}
       />
-      
+
       <View style={$content}>
         <StepsNavigation
           steps={STEPS}
           navigationRef={navigationRef}
-          onIndexChange={()=>{}}
+          onIndexChange={() => { }}
         />
       </View>
 
@@ -85,7 +74,7 @@ function StepsScreenContent() {
           onPress={handleNext}
           textStyle={{ color: "#FFFFFF" }}
           style={$footerButton}
-          disabled={isLoading}
+          disabled={isLoading || !canContinue}
         />
       </View>
     </View>

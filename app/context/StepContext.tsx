@@ -1,8 +1,8 @@
 import { createContext, Dispatch, FC, PropsWithChildren, SetStateAction, useContext, useEffect, useMemo, useState } from "react"
 
-import { fetchOnboardingData } from "@/services/onboarding"
-import type { OnboardingType } from "@/services/onboarding"
+import { fetchOnboardingData } from "@/services/onboarding/onboardingService"
 import { delay } from "@/utils/delay"
+import type { OnboardingType, OnboardingResponseType } from "@/services/onboarding/types"
 
 // ---------------------------------------------------------------------------
 // Context
@@ -15,6 +15,9 @@ export interface StepContextType {
     data: OnboardingType | null
     setData: Dispatch<SetStateAction<OnboardingType | null>>
 
+    responses: OnboardingResponseType | null
+    setResponses: Dispatch<SetStateAction<OnboardingResponseType | null>>
+
     isLoading: boolean
 }
 
@@ -22,7 +25,7 @@ export const StepContext = createContext<StepContextType | null>(null)
 
 export const StepProvider: FC<PropsWithChildren> = ({ children }) => {
     const [data, setData] = useState<OnboardingType | null>(null)
-    const [input, setInput] = useState<OnboardingType | null>(null)
+    const [responses, setResponses] = useState<OnboardingResponseType | null>(null)
     const [activeStepId, setActiveStepId] = useState<string | null>(null)
     const [isLoading, setLoading] = useState(false)
 
@@ -71,9 +74,11 @@ export const StepProvider: FC<PropsWithChildren> = ({ children }) => {
             setActiveStepId,
             data,
             setData,
+            responses,
+            setResponses,
             isLoading,
         }),
-        [activeStepId, data, isLoading],
+        [activeStepId, data, responses, isLoading],
     )
 
     return <StepContext.Provider value={value}>{children}</StepContext.Provider>
