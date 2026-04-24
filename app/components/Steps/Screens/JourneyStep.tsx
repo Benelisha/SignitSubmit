@@ -25,7 +25,6 @@ export function JourneyStep({ route }: JourneyStepProps) {
   // DATA
   const stepData = data?.onboardingFlow?.steps?.find((step: any) => step._id === stepId)
   // Break to texts
-  console.log("[JourneyStep.tsx]", "data", stepData)
   const title = stepData?.content[lang]?.text1 ??  ""
   const body: string = stepData?.content[lang]?.text2 ?? ""
   const chartTitle = stepData?.content?.[lang]?.text3 ?? stepData?.content?.en?.text3 ?? ""

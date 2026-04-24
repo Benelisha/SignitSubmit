@@ -43,8 +43,6 @@ export function ListStep({ route }: ListStepProps) {
   }, [stepData])
 
   const handleOptionPress = (_option: any) => {
-    console.log('[ListStep.tsx]', "Option pressed:", _option)
-    console.log('[ListStep.tsx]', "Data:", data)
     const updatedData = { ...data };
 
     const stepId = _option.stepId;

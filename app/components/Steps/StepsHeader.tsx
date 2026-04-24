@@ -23,7 +23,6 @@ export function StepsHeader({ progress, showBackButton = false, onBackPress }: S
         <FadeInFadeOut in="top" out="top" style={$headerContainer} inDuration={180} inDelay={300}>
             <Header
                 backgroundColor="transparent"
-                // leftIcon="caretLeft" onLeftPress={onBackPress}
                 {...(showBackButton ? { leftIcon: "caretLeft", onLeftPress: onBackPress } : {})}
                 RightActionComponent={<LangPicker />}
                 titleComponent={
