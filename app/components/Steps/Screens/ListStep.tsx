@@ -25,10 +25,10 @@ export function ListStep({ route }: ListStepProps) {
   const { width } = useWindowDimensions()
   const isWide = width >= WIDE_LAYOUT_BREAKPOINT
   const stepId = route.params?.stepId
-  
+
   const { data, setData } = useStepContext()
   const stepData = data?.onboardingFlow?.steps?.find((step: any) => step._id === stepId)
-  
+
   // Avoid react mount and remove, so the icon wont flash
   const optionAccessories = useMemo(() => {
     const map = new Map<string, ComponentType<ButtonAccessoryProps>>()
@@ -54,7 +54,7 @@ export function ListStep({ route }: ListStepProps) {
       stepData.__selectedOption = undefined;
     else
       stepData.__selectedOption = _option._id;
-    
+
     setData(updatedData)
   }
 
@@ -91,20 +91,20 @@ export function ListStep({ route }: ListStepProps) {
       </View>
 
       {/* ---=== List Options ===--- */}
-      {options.map((option: any, index: number) => {
-        const optionId = option._id
-        const isSelected = stepData.__selectedOption === optionId
-        const LeftAccessory = optionAccessories.get(optionId)
-        return <FadeInFadeOut key={optionId} inDelay={150 + index * 80} style={$button}>
-          <Button
-            state={isSelected ? "selected" : "default"}
-            text={option.translations?.[lang] ?? option.translations?.en ?? ""}
-            textStyle={themed($buttonText)}
-            LeftAccessory={LeftAccessory}
-            onPress={() => handleOptionPress(option)}
-          />
-        </FadeInFadeOut>
-      })}
+        {options.map((option: any, index: number) => {
+          const optionId = option._id
+          const isSelected = stepData.__selectedOption === optionId
+          const LeftAccessory = optionAccessories.get(optionId)
+          return <FadeInFadeOut key={optionId} inDelay={150 + index * 80} style={$button}>
+            <Button
+              state={isSelected ? "selected" : "default"}
+              text={option.translations?.[lang] ?? option.translations?.en ?? ""}
+              textStyle={themed($buttonText)}
+              LeftAccessory={LeftAccessory}
+              onPress={() => handleOptionPress(option)}
+            />
+          </FadeInFadeOut>
+        })}
     </StepScreenLayout>
   )
 }
@@ -160,12 +160,10 @@ const $stepContent: ViewStyle = {
 }
 
 const $button: ViewStyle = {
-  marginBottom: spacing.md,
-  maxHeight: 52,
+  marginBottom: spacing.xs,
   maxWidth: 420,
   width: "100%",
   alignSelf: "center",
-  marginVertical: spacing.md,
 }
 
 const $buttonText = (theme: any): TextStyle => ({
