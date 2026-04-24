@@ -49,6 +49,7 @@ export function JourneyStep() {
   const copy = stepData?.content[lang] ?? stepData?.content.en
   const title = copy?.text1 ?? ""
   const body = copy?.text2 ?? ""
+  const bodyParts = useMemo(() => body.split(/(\*[^*]+\*)/g).filter(Boolean), [body])
 
   console.log("JourneyStep render", stepData)
 
@@ -61,7 +62,18 @@ export function JourneyStep() {
           <Text preset="heading" text={title} />
         </FadeInFadeOut>
         <FadeInFadeOut in="bottom" inDelay={1200} inDuration={260} style={$spaceBottom}>
-          <Text preset="subheading" text={body} />
+          <Text preset="subheading">
+            {bodyParts.map((part, index) => {
+              const isHighlighted = part.startsWith("*") && part.endsWith("*")
+              if (!isHighlighted) return part
+
+              return (
+                <Text key={`${part}-${index}`} preset="subheading" style={themed($subheadingHighlight)}>
+                  {part.slice(1, -1)}
+                </Text>
+              )
+            })}
+          </Text>
         </FadeInFadeOut>
       </View>
     </StepScreenLayout>
@@ -83,3 +95,6 @@ const $spaceBottom: ViewStyle = {
   marginBottom: spacing.md,
 }
 
+const $subheadingHighlight = (theme: Theme) => ({
+  color: theme.colors.palette.primary500,
+})
