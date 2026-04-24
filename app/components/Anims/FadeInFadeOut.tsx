@@ -3,6 +3,10 @@ import { StyleProp, ViewStyle } from "react-native"
 import Animated, {
   EasingFunction,
   FadeIn,
+  FadeInDown,
+  FadeInLeft,
+  FadeInRight,
+  FadeInUp,
   FadeOut,
   FadeOutDown,
   FadeOutLeft,
@@ -25,7 +29,6 @@ interface FadeInFadeOutProps {
   outEasing?: EasingFunction
 }
 
-const DEFAULT_DISTANCE = 28
 const DEFAULT_DURATION = 360
 
 export function FadeInFadeOut({
@@ -56,15 +59,31 @@ function buildEnteringAnimation(
   duration: number,
   easing?: EasingFunction,
 ) {
-  let animation = FadeIn.duration(duration).delay(delay)
+  let animation
+
+  switch (direction) {
+    case "top":
+      animation = FadeInUp.duration(duration).delay(delay)
+      break
+    case "bottom":
+      animation = FadeInDown.duration(duration).delay(delay)
+      break
+    case "left":
+      animation = FadeInLeft.duration(duration).delay(delay)
+      break
+    case "right":
+      animation = FadeInRight.duration(duration).delay(delay)
+      break
+    default:
+      animation = FadeIn.duration(duration).delay(delay)
+      break
+  }
 
   if (easing) {
     animation = animation.easing(easing)
   }
 
-  const initialValues = getDirectionalInitialValues(direction)
-
-  return initialValues ? animation.withInitialValues(initialValues) : animation
+  return animation
 }
 
 function buildExitingAnimation(
@@ -80,21 +99,6 @@ function buildExitingAnimation(
   }
 
   return animation
-}
-
-function getDirectionalInitialValues(direction: FadeDirection | undefined) {
-  switch (direction) {
-    case "top":
-      return { opacity: 0, transform: [{ translateY: -DEFAULT_DISTANCE }] }
-    case "bottom":
-      return { opacity: 0, transform: [{ translateY: DEFAULT_DISTANCE }] }
-    case "left":
-      return { opacity: 0, transform: [{ translateX: -DEFAULT_DISTANCE }] }
-    case "right":
-      return { opacity: 0, transform: [{ translateX: DEFAULT_DISTANCE }] }
-    default:
-      return undefined
-  }
 }
 
 function getDirectionalExitAnimation(direction: FadeDirection | undefined) {

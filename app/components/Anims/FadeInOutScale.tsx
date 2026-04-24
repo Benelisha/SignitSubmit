@@ -13,7 +13,7 @@ interface FadeInOutScaleProps {
   outEasing?: EasingFunction
 }
 
-const DEFAULT_DURATION = 360
+const DEFAULT_DURATION = 180
 const DEFAULT_IN_EASING = Easing.out(Easing.cubic)
 const DEFAULT_OUT_EASING = Easing.in(Easing.cubic)
 

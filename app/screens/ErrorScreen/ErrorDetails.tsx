@@ -46,7 +46,6 @@ export function ErrorDetails(props: ErrorDetailsProps) {
       </ScrollView>
 
       <Button
-        preset="reversed"
         style={themed($resetButton)}
         onPress={props.onReset}
         tx="errorScreen:reset"

@@ -1,5 +1,5 @@
 import { Image as ExpoImage } from "expo-image"
-import { Platform, StyleProp, StyleSheet, View, ViewStyle } from "react-native"
+import { ImageStyle, Platform, StyleProp, StyleSheet, View, ViewStyle } from "react-native"
 import { SvgUri } from "react-native-svg"
 
 type ImageContentFit = "contain" | "cover"
@@ -27,6 +27,6 @@ export function Image({ uri, style, contentFit = "contain" }: ImageProps) {
   )
 }
 
-const $imageAsset: ViewStyle = {
+const $imageAsset: ImageStyle = {
   ...StyleSheet.absoluteFillObject,
 }

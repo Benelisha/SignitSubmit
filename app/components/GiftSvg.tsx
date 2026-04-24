@@ -1,14 +1,14 @@
 import * as React from "react"
 import Svg, { Mask, Path } from "react-native-svg"
+import type { SvgProps } from "react-native-svg"
 
-function GiftSvg(props) {
+function GiftSvg(props: SvgProps) {
     return (
         <Svg
             width={32}
             height={33}
             viewBox="0 0 32 33"
             fill="none"
-            xmlns="http://www.w3.org/2000/svg"
             {...props}
         >
             <Mask
