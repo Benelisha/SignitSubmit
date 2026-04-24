@@ -21,8 +21,8 @@ export function Step2() {
         text="We'll personalise your plan based on your answer."
         style={$spaceBottom}
       />
-      <Button preset="filled" text="Filled Button" style={$spaceBottom} />
-      <Button preset="default" text="Default Button" />
+      <Button action text="Filled Button" style={$spaceBottom} />
+      <Button state="default" text="Default Button" />
     </View>
   )
 }

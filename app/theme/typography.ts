@@ -4,6 +4,7 @@ import {
   Nunito_500Medium as nunitoMedium,
   Nunito_600SemiBold as nunitoSemiBold,
   Nunito_700Bold as nunitoBold,
+  Nunito_800ExtraBold as nunitoExtraBold,
 } from "@expo-google-fonts/nunito"
 import {
   Roboto_400Regular as robotoRegular,
@@ -17,6 +18,7 @@ export const customFontsToLoad = {
   nunitoMedium,
   nunitoSemiBold,
   nunitoBold,
+  nunitoExtraBold,
   robotoRegular,
   robotoMedium,
   robotoBold,
@@ -29,6 +31,7 @@ const fonts = {
     medium: "nunitoMedium",
     semiBold: "nunitoSemiBold",
     bold: "nunitoBold",
+    extraBold: "nunitoExtraBold",
   },
   roboto: {
     normal: "robotoRegular",

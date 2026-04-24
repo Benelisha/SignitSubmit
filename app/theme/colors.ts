@@ -82,4 +82,16 @@ export const colors = {
    * Error Background.
    */
   errorBackground: palette.angry100,
+  buttonDefaultSurface: "#FFFFFF",
+  buttonDefaultOutline: "#D8E0E9",
+  buttonDefaultText: "#211A4C",
+  buttonSelectedSurface: "#EFF0FF",
+  buttonSelectedOutline: "#688CF4",
+  buttonSelectedText: "#688CF4",
+  buttonFilledSurface: "#688CF4",
+  buttonFilledOutline: "#4C71D8",
+  buttonFilledText: "#FFFFFF",
+  buttonDisabledSurface: palette.neutral200,
+  buttonDisabledOutline: palette.neutral400,
+  buttonDisabledText: palette.neutral500,
 } as const

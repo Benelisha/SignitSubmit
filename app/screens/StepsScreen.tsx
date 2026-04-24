@@ -63,9 +63,10 @@ export function StepsScreen() {
 
       <View style={themed($footer)}>
         <Button
-          text={isLastStep ? "Finish" : "Continue"}
-          preset="filled"
+          text={isLastStep ? "FINISH" : "CONTINUE"}
+          action
           onPress={handleNext}
+          textStyle={{ color: "#FFFFFF" }}
           style={$footerButton}
         />
       </View>
@@ -97,4 +98,7 @@ const $footer = (theme: any): ViewStyle => ({
 
 const $footerButton: ViewStyle = {
   width: "100%",
+  maxHeight: 38,
+  maxWidth: 380,
+  alignSelf: "center",
 }

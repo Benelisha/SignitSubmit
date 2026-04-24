@@ -1,20 +1,37 @@
-import { ComponentType } from "react"
+import { ComponentType, useCallback, useEffect } from "react"
 import {
   Pressable,
   PressableProps,
   PressableStateCallbackType,
+  StyleSheet,
   StyleProp,
   TextStyle,
+  View,
   ViewStyle,
 } from "react-native"
+import Animated, {
+  Easing,
+  interpolateColor,
+  useAnimatedStyle,
+  useSharedValue,
+  withSpring,
+  withTiming,
+} from "react-native-reanimated"
 
 import { useAppTheme } from "@/theme/context"
-import { $styles } from "@/theme/styles"
-import type { ThemedStyle, ThemedStyleArray } from "@/theme/types"
+import type { Theme } from "@/theme/types"
 
 import { Text, TextProps } from "./Text"
 
-type Presets = "default" | "filled" | "reversed"
+const AnimatedText = Animated.createAnimatedComponent(Text)
+
+export type ButtonState = "default" | "selected" | "disabled"
+type ButtonMode = ButtonState | "action"
+
+const BUTTON_DEPTH = 8
+const SHELL_RADIUS = 14
+const FACE_RADIUS = 12.5
+const MODE_ORDER: ButtonMode[] = ["default", "selected", "disabled", "action"]
 
 export interface ButtonAccessoryProps {
   style: StyleProp<any>
@@ -23,88 +40,91 @@ export interface ButtonAccessoryProps {
 }
 
 export interface ButtonProps extends PressableProps {
-  /**
-   * Text which is looked up via i18n.
-   */
   tx?: TextProps["tx"]
-  /**
-   * The text to display if not using `tx` or nested components.
-   */
   text?: TextProps["text"]
-  /**
-   * Optional options to pass to i18n. Useful for interpolation
-   * as well as explicitly setting locale or translation fallbacks.
-   */
   txOptions?: TextProps["txOptions"]
-  /**
-   * An optional style override useful for padding & margin.
-   */
   style?: StyleProp<ViewStyle>
-  /**
-   * An optional style override for the "pressed" state.
-   */
   pressedStyle?: StyleProp<ViewStyle>
-  /**
-   * An optional style override for the button text.
-   */
   textStyle?: StyleProp<TextStyle>
-  /**
-   * An optional style override for the button text when in the "pressed" state.
-   */
   pressedTextStyle?: StyleProp<TextStyle>
-  /**
-   * An optional style override for the button text when in the "disabled" state.
-   */
   disabledTextStyle?: StyleProp<TextStyle>
-  /**
-   * One of the different types of button presets.
-   */
-  preset?: Presets
-  /**
-   * An optional component to render on the right side of the text.
-   * Example: `RightAccessory={(props) => <View {...props} />}`
-   */
   RightAccessory?: ComponentType<ButtonAccessoryProps>
-  /**
-   * An optional component to render on the left side of the text.
-   * Example: `LeftAccessory={(props) => <View {...props} />}`
-   */
   LeftAccessory?: ComponentType<ButtonAccessoryProps>
-  /**
-   * Children components.
-   */
   children?: React.ReactNode
-  /**
-   * disabled prop, accessed directly for declarative styling reasons.
-   * https://reactnative.dev/docs/pressable#disabled
-   */
-  disabled?: boolean
-  /**
-   * An optional style override for the disabled state
-   */
   disabledStyle?: StyleProp<ViewStyle>
+  state?: ButtonState
+  action?: boolean
+  shadowColor?: string
+  depth?: number
 }
 
-/**
- * A component that allows users to take actions and make choices.
- * Wraps the Text component with a Pressable component.
- * @see [Documentation and Examples]{@link https://docs.infinite.red/ignite-cli/boilerplate/app/components/Button/}
- * @param {ButtonProps} props - The props for the `Button` component.
- * @returns {JSX.Element} The rendered `Button` component.
- * @example
- * <Button
- *   tx="common:ok"
- *   style={styles.button}
- *   textStyle={styles.buttonText}
- *   onPress={handleButtonPress}
- * />
- */
+type ButtonModeStyle = {
+  surfaceColor: string
+  outlineColor: string
+  textColor: string
+  textStyle: TextStyle
+}
+
+function getButtonModeStyles(theme: Theme): Record<ButtonMode, ButtonModeStyle> {
+  return {
+    default: {
+      surfaceColor: theme.colors.buttonDefaultSurface,
+      outlineColor: theme.colors.buttonDefaultOutline,
+      textColor: theme.colors.buttonDefaultText,
+      textStyle: {
+        fontFamily: theme.typography.primary.semiBold,
+        fontSize: 18,
+        lineHeight: 22,
+      },
+    },
+    selected: {
+      surfaceColor: theme.colors.buttonSelectedSurface,
+      outlineColor: theme.colors.buttonSelectedOutline,
+      textColor: theme.colors.buttonSelectedText,
+      textStyle: {
+        fontFamily: theme.typography.primary.extraBold,
+        fontSize: 18,
+        lineHeight: 22,
+        fontVariant: ["lining-nums", "proportional-nums"],
+      },
+    },
+    disabled: {
+      surfaceColor: theme.colors.buttonDisabledSurface,
+      outlineColor: theme.colors.buttonDisabledOutline,
+      textColor: theme.colors.buttonDisabledText,
+      textStyle: {
+        fontFamily: theme.typography.primary.semiBold,
+        fontSize: 18,
+        lineHeight: 22,
+      },
+    },
+    action: {
+      surfaceColor: theme.colors.buttonFilledSurface,
+      outlineColor: theme.colors.buttonFilledOutline,
+      textColor: theme.colors.buttonFilledText,
+      textStyle: {
+        fontFamily: theme.typography.primary.extraBold,
+        fontSize: 14,
+        lineHeight: 18,
+        textTransform: "uppercase",
+        fontVariant: ["lining-nums", "proportional-nums"],
+      },
+    },
+  }
+}
+
+function resolveButtonMode(state: ButtonState, action?: boolean): ButtonMode {
+  if (state === "disabled") return "disabled"
+  if (action) return "action"
+  return state
+}
+
 export function Button(props: ButtonProps) {
   const {
     tx,
     text,
     txOptions,
-    style: $viewStyleOverride,
+    style: $styleOverride,
     pressedStyle: $pressedViewStyleOverride,
     textStyle: $textStyleOverride,
     pressedTextStyle: $pressedTextStyleOverride,
@@ -112,137 +132,246 @@ export function Button(props: ButtonProps) {
     children,
     RightAccessory,
     LeftAccessory,
-    disabled,
+    disabled: disabledProp,
     disabledStyle: $disabledViewStyleOverride,
+    state: stateProp = "default",
+    action,
+    shadowColor,
+    depth = BUTTON_DEPTH,
+    onPressIn,
+    onPressOut,
     ...rest
   } = props
 
-  const { themed } = useAppTheme()
+  const { theme } = useAppTheme()
+  const flatStyle = StyleSheet.flatten($styleOverride) ?? {}
+  const isDisabled = !!disabledProp || stateProp === "disabled"
+  const state: ButtonState = isDisabled ? "disabled" : stateProp
+  const mode = resolveButtonMode(state, action)
+  const modeStyles = getButtonModeStyles(theme)
+  const currentModeStyle = modeStyles[mode]
+  const modeIndex = MODE_ORDER.indexOf(mode)
+  const restingOffset = mode === "disabled" ? depth : 0
 
-  const preset: Presets = props.preset ?? "default"
-  /**
-   * @param {PressableStateCallbackType} root0 - The root object containing the pressed state.
-   * @param {boolean} root0.pressed - The pressed state.
-   * @returns {StyleProp<ViewStyle>} The view style based on the pressed state.
-   */
-  function $viewStyle({ pressed }: PressableStateCallbackType): StyleProp<ViewStyle> {
-    return [
-      themed($viewPresets[preset]),
-      $viewStyleOverride,
-      !!pressed && themed([$pressedViewPresets[preset], $pressedViewStyleOverride]),
-      !!disabled && $disabledViewStyleOverride,
-    ]
+  const modeProgress = useSharedValue(modeIndex)
+  const pressOffset = useSharedValue(restingOffset)
+
+  useEffect(() => {
+    modeProgress.value = withTiming(modeIndex, {
+      duration: 180,
+      easing: Easing.inOut(Easing.sin),
+    })
+
+    pressOffset.value = withTiming(restingOffset, {
+      duration: 180,
+      easing: Easing.inOut(Easing.sin),
+    })
+  }, [modeIndex, modeProgress, pressOffset, restingOffset])
+
+  const outlineColors = MODE_ORDER.map((buttonMode) =>
+    buttonMode === mode && shadowColor ? shadowColor : modeStyles[buttonMode].outlineColor,
+  )
+  const surfaceColors = MODE_ORDER.map((buttonMode) => modeStyles[buttonMode].surfaceColor)
+  const textColors = MODE_ORDER.map((buttonMode) => modeStyles[buttonMode].textColor)
+
+  const $topFaceAnimatedStyle = useAnimatedStyle(() => ({
+    transform: [{ translateY: pressOffset.value }],
+  }))
+
+  const $shellAnimatedStyle = useAnimatedStyle(() => ({
+    backgroundColor: interpolateColor(modeProgress.value, [0, 1, 2, 3], outlineColors),
+  }))
+
+  const $surfaceAnimatedStyle = useAnimatedStyle(() => ({
+    backgroundColor: interpolateColor(modeProgress.value, [0, 1, 2, 3], surfaceColors),
+    borderBottomColor: interpolateColor(modeProgress.value, [0, 1, 2, 3], outlineColors),
+  }))
+
+  const $bottomAnimatedStyle = useAnimatedStyle(() => ({
+    backgroundColor: interpolateColor(modeProgress.value, [0, 1, 2, 3], outlineColors),
+  }))
+
+  const $textAnimatedStyle = useAnimatedStyle(() => ({
+    color: interpolateColor(modeProgress.value, [0, 1, 2, 3], textColors),
+  }))
+
+  const handlePressIn = useCallback(
+    (e: any) => {
+      if (!isDisabled) {
+        pressOffset.value = withTiming(depth, {
+          duration: 10,
+          easing: Easing.out(Easing.sin),
+        })
+      }
+
+      onPressIn?.(e)
+    },
+    [depth, isDisabled, onPressIn, pressOffset],
+  )
+
+  const handlePressOut = useCallback(
+    (e: any) => {
+      pressOffset.value = withSpring(restingOffset, { damping: 54, stiffness: 820 })
+      onPressOut?.(e)
+    },
+    [onPressOut, pressOffset, restingOffset],
+  )
+
+  const {
+    height,
+    minHeight,
+    maxHeight,
+    padding,
+    paddingVertical,
+    paddingTop,
+    paddingBottom,
+    ...$wrapperStyleRest
+  } = flatStyle
+
+  const $wrapperStyle: StyleProp<ViewStyle> = [$outerWrapper, { paddingBottom: depth }, $wrapperStyleRest]
+
+  const $faceSizeOverride: ViewStyle = {
+    ...(typeof height === "number" ? { height } : {}),
+    ...(typeof minHeight === "number"
+      ? { minHeight }
+      : typeof height === "number" || typeof maxHeight === "number"
+        ? { minHeight: 0 }
+        : {}),
+    ...(typeof maxHeight === "number" ? { maxHeight } : {}),
+    ...(typeof padding === "number" ? { padding } : {}),
+    ...(typeof paddingVertical === "number" ? { paddingVertical } : {}),
+    ...(typeof paddingTop === "number" ? { paddingTop } : {}),
+    ...(typeof paddingBottom === "number" ? { paddingBottom } : {}),
   }
-  /**
-   * @param {PressableStateCallbackType} root0 - The root object containing the pressed state.
-   * @param {boolean} root0.pressed - The pressed state.
-   * @returns {StyleProp<TextStyle>} The text style based on the pressed state.
-   */
-  function $textStyle({ pressed }: PressableStateCallbackType): StyleProp<TextStyle> {
-    return [
-      themed($textPresets[preset]),
-      $textStyleOverride,
-      !!pressed && themed([$pressedTextPresets[preset], $pressedTextStyleOverride]),
-      !!disabled && $disabledTextStyleOverride,
-    ]
+
+  const $textModeStyle: StyleProp<TextStyle> = [
+    $baseTextStyle,
+    currentModeStyle.textStyle,
+    $textStyleOverride,
+    mode === "disabled" && $disabledTextStyleOverride,
+  ]
+
+  const $leftAccessoryStyle: ViewStyle = {
+    marginEnd: theme.spacing.xs,
+    zIndex: 1,
+  }
+
+  const $rightAccessoryStyle: ViewStyle = {
+    marginStart: theme.spacing.xs,
+    zIndex: 1,
   }
 
   return (
-    <Pressable
-      style={$viewStyle}
-      accessibilityRole="button"
-      accessibilityState={{ disabled: !!disabled }}
-      {...rest}
-      disabled={disabled}
-    >
-      {(state) => (
-        <>
-          {!!LeftAccessory && (
-            <LeftAccessory style={$leftAccessoryStyle} pressableState={state} disabled={disabled} />
-          )}
+    <View style={$wrapperStyle}>
+      <Animated.View
+        pointerEvents="none"
+        style={[$bottomSlabStyle, { top: depth }, $bottomAnimatedStyle]}
+      />
 
-          <Text tx={tx} text={text} txOptions={txOptions} style={$textStyle(state)}>
-            {children}
-          </Text>
+      <Animated.View style={[$topFaceWrapper, $topFaceAnimatedStyle]}>
+        <Animated.View style={[$topShellBase, $shellAnimatedStyle]}>
+          <Pressable
+            accessibilityRole="button"
+            accessibilityState={{ disabled: isDisabled, selected: state === "selected" }}
+            onPressIn={handlePressIn}
+            onPressOut={handlePressOut}
+            disabled={isDisabled}
+            {...rest}
+          >
+            {({ pressed }) => (
+              <Animated.View
+                style={[
+                  $faceBase,
+                  $faceSizeOverride,
+                  $surfaceAnimatedStyle,
+                  (pressed || mode === "disabled") && $pressedBottomBorder,
+                  pressed && $pressedViewStyleOverride,
+                  mode === "disabled" && $disabledViewStyleOverride,
+                ]}
+              >
+                {!!LeftAccessory && (
+                  <LeftAccessory
+                    style={$leftAccessoryStyle}
+                    pressableState={{ pressed } as PressableStateCallbackType}
+                    disabled={isDisabled}
+                  />
+                )}
 
-          {!!RightAccessory && (
-            <RightAccessory
-              style={$rightAccessoryStyle}
-              pressableState={state}
-              disabled={disabled}
-            />
-          )}
-        </>
-      )}
-    </Pressable>
+                <AnimatedText
+                  tx={tx}
+                  text={text}
+                  txOptions={txOptions}
+                  style={[
+                    $textModeStyle,
+                    $textAnimatedStyle,
+                    pressed && $pressedTextStyleOverride,
+                    mode === "disabled" && $disabledTextStyleOverride,
+                  ]}
+                >
+                  {children}
+                </AnimatedText>
+
+                {!!RightAccessory && (
+                  <RightAccessory
+                    style={$rightAccessoryStyle}
+                    pressableState={{ pressed } as PressableStateCallbackType}
+                    disabled={isDisabled}
+                  />
+                )}
+              </Animated.View>
+            )}
+          </Pressable>
+        </Animated.View>
+      </Animated.View>
+    </View>
   )
 }
 
-const $baseViewStyle: ThemedStyle<ViewStyle> = ({ spacing }) => ({
+const $outerWrapper: ViewStyle = {
+  position: "relative",
+  overflow: "visible",
+}
+
+const $topFaceWrapper: ViewStyle = {
+  zIndex: 1,
+}
+
+const $topShellBase: ViewStyle = {
+  padding: 3,
+  borderRadius: SHELL_RADIUS,
+}
+
+const $faceBase: ViewStyle = {
   minHeight: 56,
-  borderRadius: 4,
+  borderRadius: FACE_RADIUS,
+  flexDirection: "row",
   justifyContent: "center",
   alignItems: "center",
-  paddingVertical: spacing.sm,
-  paddingHorizontal: spacing.sm,
+  paddingVertical: 12,
+  paddingHorizontal: 12,
   overflow: "hidden",
-})
+}
 
-const $baseTextStyle: ThemedStyle<TextStyle> = ({ typography }) => ({
-  fontSize: 16,
-  lineHeight: 20,
-  fontFamily: typography.primary.medium,
+const $baseTextStyle: TextStyle = {
   textAlign: "center",
   flexShrink: 1,
   flexGrow: 0,
   zIndex: 2,
-})
-
-const $rightAccessoryStyle: ThemedStyle<ViewStyle> = ({ spacing }) => ({
-  marginStart: spacing.xs,
-  zIndex: 1,
-})
-const $leftAccessoryStyle: ThemedStyle<ViewStyle> = ({ spacing }) => ({
-  marginEnd: spacing.xs,
-  zIndex: 1,
-})
-
-const $viewPresets: Record<Presets, ThemedStyleArray<ViewStyle>> = {
-  default: [
-    $styles.row,
-    $baseViewStyle,
-    ({ colors }) => ({
-      borderWidth: 1,
-      borderColor: colors.palette.neutral400,
-      backgroundColor: colors.palette.neutral100,
-    }),
-  ],
-  filled: [
-    $styles.row,
-    $baseViewStyle,
-    ({ colors }) => ({ backgroundColor: colors.palette.neutral300 }),
-  ],
-  reversed: [
-    $styles.row,
-    $baseViewStyle,
-    ({ colors }) => ({ backgroundColor: colors.palette.neutral800 }),
-  ],
+  letterSpacing: 0,
 }
 
-const $textPresets: Record<Presets, ThemedStyleArray<TextStyle>> = {
-  default: [$baseTextStyle],
-  filled: [$baseTextStyle],
-  reversed: [$baseTextStyle, ({ colors }) => ({ color: colors.palette.neutral100 })],
+const $bottomSlabStyle: ViewStyle = {
+  position: "absolute",
+  right: 0,
+  bottom: 0,
+  left: 0,
+  zIndex: 0,
+  borderTopLeftRadius: SHELL_RADIUS,
+  borderTopRightRadius: SHELL_RADIUS,
+  borderBottomLeftRadius: SHELL_RADIUS,
+  borderBottomRightRadius: SHELL_RADIUS,
 }
 
-const $pressedViewPresets: Record<Presets, ThemedStyle<ViewStyle>> = {
-  default: ({ colors }) => ({ backgroundColor: colors.palette.neutral200 }),
-  filled: ({ colors }) => ({ backgroundColor: colors.palette.neutral400 }),
-  reversed: ({ colors }) => ({ backgroundColor: colors.palette.neutral700 }),
-}
-
-const $pressedTextPresets: Record<Presets, ThemedStyle<TextStyle>> = {
-  default: () => ({ opacity: 0.9 }),
-  filled: () => ({ opacity: 0.9 }),
-  reversed: () => ({ opacity: 0.9 }),
+const $pressedBottomBorder: ViewStyle = {
+  borderBottomWidth: 1,
 }

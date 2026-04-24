@@ -1,12 +1,14 @@
-import { View, ViewStyle } from "react-native"
+import { TextStyle, View, ViewStyle } from "react-native"
 
 import { Button } from "@/components/UI/Button"
 import { Text } from "@/components/UI/Text"
 import { useAppTheme } from "@/theme/context"
 import { spacing } from "@/theme/spacing"
+import { useState } from "react"
 
 export function Step1() {
   const { themed } = useAppTheme()
+  const [state, setState] = useState("default")
 
   return (
     <View style={themed($stepContainer)}>
@@ -29,9 +31,9 @@ export function Step1() {
         style={$spaceBottom}
       />
 
-      <Button preset="filled" text="Filled Button" style={$spaceBottom} />
-      <Button preset="default" text="Default Button" style={$spaceBottom} />
-      <Button preset="reversed" text="Reversed Button" />
+      <Button state="disabled" text="Disabled" style={$button} textStyle={$buttonText} />
+      <Button state={state} text="Default" style={$button} onPress={() => state == "default" ? setState("selected") : setState("default")} textStyle={$buttonText} />
+      <Button state="selected" text="Selected true" style={$button} textStyle={$buttonText} />
     </View>
   )
 }
@@ -45,5 +47,17 @@ const $stepContainer = (theme: any): ViewStyle => ({
 })
 
 const $spaceBottom: ViewStyle = {
-  marginBottom: spacing.md,
+  marginBottom: spacing.xs,
 }
+
+const $button: ViewStyle = {
+  marginBottom: spacing.xs,
+  maxHeight: 56,
+  maxWidth: 420,
+  width: "100%",
+  alignSelf: "center",
+}
+
+const $buttonText = (theme: any): TextStyle => ({
+  textAlign: "left",
+})
