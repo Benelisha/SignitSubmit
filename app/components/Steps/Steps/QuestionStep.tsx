@@ -20,7 +20,7 @@ function SignalAccessory({ style }: { style: ViewStyle }) {
   return <Image uri={SIGNAL_ICON_URL} style={[style, $signalIcon]} />
 }
 
-export function Step1() {
+export function QuestionStep() {
   const { themed } = useAppTheme()
   const [state, setState] = useState<ButtonState>("default")
   const { width } = useWindowDimensions()

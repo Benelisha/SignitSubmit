@@ -9,7 +9,7 @@ import { useAppTheme } from "@/theme/context"
 import { spacing } from "@/theme/spacing"
 import type { Theme } from "@/theme/types"
 
-export function Step2() {
+export function JourneyStep() {
   const { themed } = useAppTheme()
 
   return (

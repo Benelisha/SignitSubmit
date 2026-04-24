@@ -24,7 +24,7 @@ import * as Linking from "expo-linking"
 import { KeyboardProvider } from "react-native-keyboard-controller"
 import { initialWindowMetrics, SafeAreaProvider } from "react-native-safe-area-context"
 
-import { AuthProvider } from "./context/AuthContext"
+import { LangProvider } from "./context/LangContext"
 import { initI18n } from "./i18n"
 import { AppNavigation } from "./navigators/AppNavigation"
 import { ThemeProvider } from "./theme/context"
@@ -73,11 +73,11 @@ export function App() {
   return (
     <SafeAreaProvider initialMetrics={initialWindowMetrics}>
       <KeyboardProvider>
-        <AuthProvider>
+        <LangProvider>
           <ThemeProvider>
             <AppNavigation linking={linking} />
           </ThemeProvider>
-        </AuthProvider>
+        </LangProvider>
       </KeyboardProvider>
     </SafeAreaProvider>
   )

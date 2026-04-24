@@ -50,11 +50,11 @@ export function ChartBubble({
 const $bubble = (_theme: Theme): ViewStyle => ({
     position: "relative",
     paddingHorizontal: spacing.md,
-    paddingVertical: spacing.md,
+    paddingVertical: spacing.xs,
     backgroundColor: "#FFFFFF",
     borderWidth: 2,
     borderColor: "#EDEDED",
-    borderRadius: spacing.md,
+    borderRadius: spacing.xs,
     overflow: "visible",
     shadowColor: "#000000",
     shadowOpacity: 0.08,

@@ -1,5 +1,5 @@
-import { useCallback, useState } from "react"
-import { LayoutChangeEvent, StyleSheet, TextStyle, View, ViewStyle } from "react-native"
+import { useCallback, useMemo, useState } from "react"
+import { LayoutChangeEvent, StyleSheet, TextStyle, View, ViewStyle, useWindowDimensions } from "react-native"
 import { Easing } from "react-native-reanimated"
 
 import { FadeInOutScale } from "@/components/Anims/FadeInOutScale"
@@ -9,7 +9,8 @@ import ChartBG, {
     CHART_PATH_START_DELAY,
     CHART_VIEWBOX_HEIGHT,
     CHART_VIEWBOX_WIDTH,
-    type ChartBGPointLayout,
+    CHART_CIRCLE_POINTS,
+    type ChartCirclePoint,
 } from "@/components/ChartSvg"
 import { ChartBubble } from "@/components/Steps/ChartBubble"
 import { Text } from "@/components/UI/Text"
@@ -19,40 +20,35 @@ import type { Theme } from "@/theme/types"
 
 const CHART_BUBBLE_GAP = 22
 const CHART_EDGE_LABEL_COLOR = "#999999"
-const CHART_BUBBLE_TEXT: Record<ChartBGPointLayout["id"], string> = {
+const CHART_MAX_WIDTH = 340
+const CHART_HORIZONTAL_SCREEN_PADDING = 32
+const CHART_ANIMATION_SPEED_FACTOR = 0.5
+const CHART_BUBBLE_TEXT: Record<ChartCirclePoint["id"], string> = {
     start: "Start",
     middle: "Middle",
     end: "End",
 }
 
-type BubbleSizeMap = Partial<Record<ChartBGPointLayout["id"], { width: number; height: number }>>
+type BubbleSizeMap = Partial<Record<ChartCirclePoint["id"], { width: number; height: number }>>
 
 export function Chart() {
     const { themed, theme } = useAppTheme()
-    const [chartPointLayouts, setChartPointLayouts] = useState<ChartBGPointLayout[]>([])
+    const { width: screenWidth } = useWindowDimensions()
     const [bubbleSizes, setBubbleSizes] = useState<BubbleSizeMap>({})
-    const [chartSize, setChartSize] = useState({ width: CHART_VIEWBOX_WIDTH, height: CHART_VIEWBOX_HEIGHT })
 
-    const handleChartPointsLayout = useCallback((nextChartPointLayouts: ChartBGPointLayout[]) => {
-        setChartPointLayouts((currentChartPointLayouts) => {
-            if (
-                currentChartPointLayouts.length === nextChartPointLayouts.length &&
-                currentChartPointLayouts.every(
-                    (point, index) =>
-                        point.id === nextChartPointLayouts[index]?.id &&
-                        point.x === nextChartPointLayouts[index]?.x &&
-                        point.y === nextChartPointLayouts[index]?.y,
-                )
-            ) {
-                return currentChartPointLayouts
-            }
-
-            return nextChartPointLayouts
-        })
-    }, [])
+    const chartWidth = useMemo(
+        () => Math.min(Math.max(screenWidth - CHART_HORIZONTAL_SCREEN_PADDING, 0), CHART_MAX_WIDTH),
+        [screenWidth],
+    )
+    const chartHeight = useMemo(
+        () => (chartWidth / CHART_VIEWBOX_WIDTH) * CHART_VIEWBOX_HEIGHT,
+        [chartWidth],
+    )
+    // Single scale factor derived purely from width — no async layout callbacks needed
+    const chartScale = chartWidth / CHART_VIEWBOX_WIDTH
 
     const handleBubbleLayout = useCallback(
-        (id: ChartBGPointLayout["id"]) =>
+        (id: ChartCirclePoint["id"]) =>
             ({ nativeEvent: { layout } }: LayoutChangeEvent) => {
                 const nextWidth = Math.round(layout.width)
                 const nextHeight = Math.round(layout.height)
@@ -76,35 +72,36 @@ export function Chart() {
         [],
     )
 
-    const handleChartLayout = useCallback(({ nativeEvent: { layout } }: LayoutChangeEvent) => {
-        const nextWidth = Math.round(layout.width)
-        const nextHeight = Math.round(layout.height)
-
-        if (!nextWidth || !nextHeight) {
-            return
-        }
-
-        setChartSize((currentSize) => {
-            if (currentSize.width === nextWidth && currentSize.height === nextHeight) {
-                return currentSize
-            }
-
-            return { width: nextWidth, height: nextHeight }
-        })
-    }, [])
-
-    const chartScale = Math.min(chartSize.width / CHART_VIEWBOX_WIDTH, chartSize.height / CHART_VIEWBOX_HEIGHT)
+    // Overlay sits at VIEWBOX size and is scaled as a single unit from its top-left corner.
+    // This means every child inside can be positioned in VIEWBOX coordinates with no extra math.
+    const overlayTransform: ViewStyle = {
+        position: "absolute",
+        top: 0,
+        left: 0,
+        width: CHART_VIEWBOX_WIDTH,
+        height: CHART_VIEWBOX_HEIGHT,
+        transform: [
+            { translateX: -(CHART_VIEWBOX_WIDTH * (1 - chartScale)) / 2 },
+            { translateY: -(CHART_VIEWBOX_HEIGHT * (1 - chartScale)) / 2 },
+            { scale: chartScale },
+        ],
+    }
 
     return (
-        <FadeInOutScale inDelay={60} outDelay={40} style={$imageWrap}>
-            <ChartBG style={$backgroundImage} onPointsLayout={handleChartPointsLayout} />
-            <View pointerEvents="none" style={$chartTextOverlay}>
-                <Text preset="heading" text="English journey" style={[themed($chartHeading), getScaledHeadingStyle(chartScale)]} />
-                <Text style={[themed($chartEdgeLabel), getScaledEdgeLabelStyle(chartScale), $chartNowLabel]}>Now</Text>
-                <Text style={[themed($chartEdgeLabel), getScaledEdgeLabelStyle(chartScale), $chartDaysLabel]}>27 Days</Text>
-            </View>
-            <View pointerEvents="none" style={$bubbleOverlay} onLayout={handleChartLayout}>
-                {chartPointLayouts.map((point) => {
+        <FadeInOutScale
+            inDelay={60 * CHART_ANIMATION_SPEED_FACTOR}
+            outDelay={40 * CHART_ANIMATION_SPEED_FACTOR}
+            style={[$imageWrap, { width: chartWidth, height: chartHeight }]}
+        >
+            <ChartBG style={$backgroundImage} />
+            <View pointerEvents="none" style={overlayTransform}>
+                {/* Text labels — positioned in viewBox coordinates */}
+                <Text preset="heading" text="English journey" style={themed($chartHeading)} />
+                <Text style={[themed($chartEdgeLabel), $chartNowLabel]}>Now</Text>
+                <Text style={[themed($chartEdgeLabel), $chartDaysLabel]}>27 Days</Text>
+
+                {/* Bubbles — anchored to the known circle cx/cy in viewBox space */}
+                {CHART_CIRCLE_POINTS.map((point, index) => {
                     const bubbleSize = bubbleSizes[point.id]
                     const bubbleWidth = bubbleSize?.width ?? 0
                     const bubbleHeight = bubbleSize?.height ?? 0
@@ -113,17 +110,18 @@ export function Chart() {
                         <FadeInOutScale
                             key={point.id}
                             inDelay={
-                                CHART_PATH_START_DELAY +
-                                CHART_BUBBLE_REVEAL_OFFSET +
-                                chartPointLayouts.findIndex(({ id }) => id === point.id) * CHART_BUBBLE_REVEAL_INTERVAL
+                                (CHART_PATH_START_DELAY +
+                                    CHART_BUBBLE_REVEAL_OFFSET +
+                                    index * CHART_BUBBLE_REVEAL_INTERVAL) *
+                                CHART_ANIMATION_SPEED_FACTOR
                             }
-                            inDuration={360}
+                            inDuration={360 * CHART_ANIMATION_SPEED_FACTOR}
                             inEasing={Easing.out(Easing.back(1.3))}
                             style={[
                                 $bubblePosition,
                                 {
-                                    left: point.x - bubbleWidth / 2,
-                                    top: point.y - bubbleHeight - CHART_BUBBLE_GAP * chartScale,
+                                    left: point.cx - bubbleWidth / 2,
+                                    top: point.cy - bubbleHeight - CHART_BUBBLE_GAP,
                                 },
                             ]}
                         >
@@ -131,7 +129,7 @@ export function Chart() {
                                 <ChartBubble
                                     text={CHART_BUBBLE_TEXT[point.id]}
                                     arrowPosition="down"
-                                    arrowTranslateX={Math.max(bubbleWidth / 2 - 28 * chartScale, 0)}
+                                    arrowTranslateX={Math.max(bubbleWidth / 2 - 28, 0)}
                                     textColor={point.id === "end" ? theme.colors.stepGradientMiddle : undefined}
                                 />
                             </View>
@@ -144,23 +142,11 @@ export function Chart() {
 }
 
 const $imageWrap: ViewStyle = {
-    flex: 1,
-    width: "100%",
-    maxWidth: 340,
-    maxHeight: 230,
     alignSelf: "center",
     marginTop: 34,
 }
 
 const $backgroundImage: ViewStyle = {
-    ...StyleSheet.absoluteFillObject,
-}
-
-const $chartTextOverlay: ViewStyle = {
-    ...StyleSheet.absoluteFillObject,
-}
-
-const $bubbleOverlay: ViewStyle = {
     ...StyleSheet.absoluteFillObject,
 }
 
@@ -186,29 +172,12 @@ const $chartEdgeLabel = (theme: Theme): TextStyle => ({
     fontVariant: ["lining-nums", "proportional-nums"],
 })
 
-const $chartNowLabel: ViewStyle = {
+const $chartNowLabel: TextStyle = {
     left: spacing.md,
+    bottom: spacing.md,
 }
 
-const $chartDaysLabel: ViewStyle = {
+const $chartDaysLabel: TextStyle = {
     right: spacing.md,
-}
-
-function getScaledHeadingStyle(scale: number): TextStyle {
-    return {
-        left: spacing.md * scale,
-        top: spacing.md * scale,
-    }
-}
-
-function getScaledEdgeLabelStyle(scale: number): TextStyle {
-    const fontSize = Math.max(8, 10 * scale)
-
-    return {
-        fontSize,
-        lineHeight: fontSize,
-        left: undefined,
-        right: undefined,
-        bottom: spacing.md * scale,
-    }
+    bottom: spacing.md,
 }

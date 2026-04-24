@@ -5,6 +5,8 @@ import { ProgressBar } from "@/components/UI/ProgressBar"
 import { useAppTheme } from "@/theme/context"
 import { IdleAnimation } from "../Anims/IdleAnimation"
 import GiftSvg from "../GiftSvg"
+import { LangPicker } from "./LangPicker"
+import { FadeInFadeOut } from "../Anims/FadeInFadeOut"
 
 interface StepsHeaderProps {
     progress: number
@@ -12,28 +14,30 @@ interface StepsHeaderProps {
     onBackPress?: () => void
 }
 
-export const STEPS_HEADER_BAR_HEIGHT = 56
+export const STEPS_HEADER_BAR_HEIGHT = 64
 
 export function StepsHeader({ progress, showBackButton = false, onBackPress }: StepsHeaderProps) {
     const { themed } = useAppTheme()
 
     return (
-        <Header
-            containerStyle={$headerContainer}
-            backgroundColor="transparent"
-            // leftIcon="caretLeft" onLeftPress={onBackPress}
-            {...(showBackButton ? { leftIcon: "caretLeft", onLeftPress: onBackPress } : {})}
-            titleComponent={
-                <View style={themed($content)}>
-                    <View style={$progressWrapper}>
-                        <ProgressBar progress={progress} />
+        <FadeInFadeOut in="top" out="top" style={$headerContainer} inDuration={180} inDelay={300}>
+            <Header
+                backgroundColor="transparent"
+                // leftIcon="caretLeft" onLeftPress={onBackPress}
+                {...(showBackButton ? { leftIcon: "caretLeft", onLeftPress: onBackPress } : {})}
+                RightActionComponent={<LangPicker />}
+                titleComponent={
+                    <View style={themed($content)}>
+                        <View style={$progressWrapper}>
+                            <ProgressBar progress={progress} />
+                        </View>
+                        <IdleAnimation style={[themed($giftContainer), $giftAbsolute]}>
+                            <GiftSvg width={28} height={28} />
+                        </IdleAnimation>
                     </View>
-                    <IdleAnimation style={[themed($giftContainer), $giftAbsolute]}>
-                        <GiftSvg width={28} height={28} />
-                    </IdleAnimation>
-                </View>
-            }
-        />
+                }
+            />
+        </FadeInFadeOut>
     )
 }
 
@@ -48,29 +52,31 @@ const $headerContainer: ViewStyle = {
 const $content = (theme: any): ViewStyle => ({
     flex: 1,
     width: "100%",
+    maxWidth: 620,
     flexDirection: "row",
     alignItems: "center",
     backgroundColor: theme.colors.transparent,
     position: "relative",
+    paddingLeft: theme.spacing.xxl,
+    paddingRight: theme.spacing.xxl,
 })
 
 const $progressWrapper: ViewStyle = {
     flex: 1,
-    marginRight: 32,
+    marginRight: 24,
+    marginLeft: -24,
 }
 
 const $giftAbsolute: ViewStyle = {
     position: "absolute",
-    right: 0,
-    marginRight: 48,
+    right: 64,
+    // marginRight: 48,
 }
 
 const $giftContainer = (theme: any): ViewStyle => ({
-    marginLeft: 10,
+    marginRight: 16,
     width: 36,
     height: 36,
     alignItems: "center",
     justifyContent: "center",
-    borderRadius: 18,
-    backgroundColor: theme.colors.palette.neutral100,
 })

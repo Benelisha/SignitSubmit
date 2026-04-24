@@ -64,6 +64,14 @@ export interface ChartBGPointLayout {
   y: number
 }
 
+export interface ChartCirclePoint {
+  id: CirclePoint["id"]
+  cx: number
+  cy: number
+}
+
+export const CHART_CIRCLE_POINTS: ChartCirclePoint[] = CIRCLE_POINTS.map(({ id, cx, cy }) => ({ id, cx, cy }))
+
 interface ChartBGProps {
   style?: StyleProp<ViewStyle>
   onPointsLayout?: (points: ChartBGPointLayout[]) => void

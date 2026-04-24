@@ -26,12 +26,12 @@ import { Text, TextProps } from "./Text"
 const AnimatedText = Animated.createAnimatedComponent(Text)
 
 export type ButtonState = "default" | "selected" | "disabled"
-type ButtonMode = ButtonState | "action"
+type ButtonVariant = "standard" | "action"
 
 const BUTTON_DEPTH = 8
 const SHELL_RADIUS = 14
 const FACE_RADIUS = 12.5
-const MODE_ORDER: ButtonMode[] = ["default", "selected", "disabled", "action"]
+const STATE_ORDER: ButtonState[] = ["default", "selected", "disabled"]
 
 export interface ButtonAccessoryProps {
   style: StyleProp<any>
@@ -39,7 +39,7 @@ export interface ButtonAccessoryProps {
   disabled?: boolean
 }
 
-export interface ButtonProps extends PressableProps {
+interface BaseButtonProps extends PressableProps {
   tx?: TextProps["tx"]
   text?: TextProps["text"]
   txOptions?: TextProps["txOptions"]
@@ -52,20 +52,26 @@ export interface ButtonProps extends PressableProps {
   LeftAccessory?: ComponentType<ButtonAccessoryProps>
   children?: React.ReactNode
   disabledStyle?: StyleProp<ViewStyle>
-  state?: ButtonState
-  action?: boolean
   shadowColor?: string
   depth?: number
 }
 
-type ButtonModeStyle = {
+export interface ButtonProps extends BaseButtonProps {
+  state?: ButtonState
+}
+
+export interface ActionButtonProps extends Omit<BaseButtonProps, "pressedTextStyle"> {
+  actionDisabledTextStyle?: StyleProp<TextStyle>
+}
+
+type ButtonVisualStyle = {
   surfaceColor: string
   outlineColor: string
   textColor: string
   textStyle: TextStyle
 }
 
-function getButtonModeStyles(theme: Theme): Record<ButtonMode, ButtonModeStyle> {
+function getButtonStyles(theme: Theme): Record<ButtonState, ButtonVisualStyle> {
   return {
     default: {
       surfaceColor: theme.colors.buttonDefaultSurface,
@@ -98,7 +104,12 @@ function getButtonModeStyles(theme: Theme): Record<ButtonMode, ButtonModeStyle> 
         lineHeight: 22,
       },
     },
-    action: {
+  }
+}
+
+function getActionStyles(theme: Theme): Record<ButtonState, ButtonVisualStyle> {
+  return {
+    default: {
       surfaceColor: theme.colors.buttonFilledSurface,
       outlineColor: theme.colors.buttonFilledOutline,
       textColor: theme.colors.buttonFilledText,
@@ -110,16 +121,40 @@ function getButtonModeStyles(theme: Theme): Record<ButtonMode, ButtonModeStyle> 
         fontVariant: ["lining-nums", "proportional-nums"],
       },
     },
+    selected: {
+      surfaceColor: theme.colors.buttonFilledSurface,
+      outlineColor: theme.colors.buttonFilledOutline,
+      textColor: theme.colors.buttonFilledText,
+      textStyle: {
+        fontFamily: theme.typography.primary.extraBold,
+        fontSize: 14,
+        lineHeight: 18,
+        textTransform: "uppercase",
+        fontVariant: ["lining-nums", "proportional-nums"],
+      },
+    },
+    disabled: {
+      surfaceColor: theme.colors.buttonDisabledSurface,
+      outlineColor: theme.colors.buttonDisabledOutline,
+      textColor: theme.colors.buttonDisabledText,
+      textStyle: {
+        fontFamily: theme.typography.primary.semiBold,
+        fontSize: 14,
+        lineHeight: 18,
+        textTransform: "uppercase",
+        fontVariant: ["lining-nums", "proportional-nums"],
+      },
+    },
   }
 }
 
-function resolveButtonMode(state: ButtonState, action?: boolean): ButtonMode {
-  if (state === "disabled") return "disabled"
-  if (action) return "action"
-  return state
-}
-
-export function Button(props: ButtonProps) {
+function InternalButton(
+  props: BaseButtonProps & {
+    variant: ButtonVariant
+    state: ButtonState
+    actionDisabledTextStyle?: StyleProp<TextStyle>
+  },
+) {
   const {
     tx,
     text,
@@ -134,8 +169,9 @@ export function Button(props: ButtonProps) {
     LeftAccessory,
     disabled: disabledProp,
     disabledStyle: $disabledViewStyleOverride,
-    state: stateProp = "default",
-    action,
+    state,
+    variant,
+    actionDisabledTextStyle: $actionDisabledTextStyleOverride,
     shadowColor,
     depth = BUTTON_DEPTH,
     onPressIn,
@@ -145,13 +181,12 @@ export function Button(props: ButtonProps) {
 
   const { theme } = useAppTheme()
   const flatStyle = StyleSheet.flatten($styleOverride) ?? {}
-  const isDisabled = !!disabledProp || stateProp === "disabled"
-  const state: ButtonState = isDisabled ? "disabled" : stateProp
-  const mode = resolveButtonMode(state, action)
-  const modeStyles = getButtonModeStyles(theme)
-  const currentModeStyle = modeStyles[mode]
-  const modeIndex = MODE_ORDER.indexOf(mode)
-  const restingOffset = mode === "disabled" ? depth : 0
+  const isDisabled = !!disabledProp || state === "disabled"
+  const resolvedState: ButtonState = isDisabled ? "disabled" : state
+  const visualStylesByState = variant === "action" ? getActionStyles(theme) : getButtonStyles(theme)
+  const currentVisualStyle = visualStylesByState[resolvedState]
+  const modeIndex = STATE_ORDER.indexOf(resolvedState)
+  const restingOffset = resolvedState === "disabled" ? depth : 0
 
   const modeProgress = useSharedValue(modeIndex)
   const pressOffset = useSharedValue(restingOffset)
@@ -168,31 +203,33 @@ export function Button(props: ButtonProps) {
     })
   }, [modeIndex, modeProgress, pressOffset, restingOffset])
 
-  const outlineColors = MODE_ORDER.map((buttonMode) =>
-    buttonMode === mode && shadowColor ? shadowColor : modeStyles[buttonMode].outlineColor,
+  const outlineColors = STATE_ORDER.map((buttonState) =>
+    buttonState === resolvedState && shadowColor
+      ? shadowColor
+      : visualStylesByState[buttonState].outlineColor,
   )
-  const surfaceColors = MODE_ORDER.map((buttonMode) => modeStyles[buttonMode].surfaceColor)
-  const textColors = MODE_ORDER.map((buttonMode) => modeStyles[buttonMode].textColor)
+  const surfaceColors = STATE_ORDER.map((buttonState) => visualStylesByState[buttonState].surfaceColor)
+  const textColors = STATE_ORDER.map((buttonState) => visualStylesByState[buttonState].textColor)
 
   const $topFaceAnimatedStyle = useAnimatedStyle(() => ({
     transform: [{ translateY: pressOffset.value }],
   }))
 
   const $shellAnimatedStyle = useAnimatedStyle(() => ({
-    backgroundColor: interpolateColor(modeProgress.value, [0, 1, 2, 3], outlineColors),
+    backgroundColor: interpolateColor(modeProgress.value, [0, 1, 2], outlineColors),
   }))
 
   const $surfaceAnimatedStyle = useAnimatedStyle(() => ({
-    backgroundColor: interpolateColor(modeProgress.value, [0, 1, 2, 3], surfaceColors),
-    borderBottomColor: interpolateColor(modeProgress.value, [0, 1, 2, 3], outlineColors),
+    backgroundColor: interpolateColor(modeProgress.value, [0, 1, 2], surfaceColors),
+    borderBottomColor: interpolateColor(modeProgress.value, [0, 1, 2], outlineColors),
   }))
 
   const $bottomAnimatedStyle = useAnimatedStyle(() => ({
-    backgroundColor: interpolateColor(modeProgress.value, [0, 1, 2, 3], outlineColors),
+    backgroundColor: interpolateColor(modeProgress.value, [0, 1, 2], outlineColors),
   }))
 
   const $textAnimatedStyle = useAnimatedStyle(() => ({
-    color: interpolateColor(modeProgress.value, [0, 1, 2, 3], textColors),
+    color: interpolateColor(modeProgress.value, [0, 1, 2], textColors),
   }))
 
   const handlePressIn = useCallback(
@@ -246,15 +283,16 @@ export function Button(props: ButtonProps) {
 
   const $textModeStyle: StyleProp<TextStyle> = [
     $baseTextStyle,
-    currentModeStyle.textStyle,
+    currentVisualStyle.textStyle,
     $textStyleOverride,
-    mode === "disabled" && $disabledTextStyleOverride,
+    resolvedState === "disabled" && $disabledTextStyleOverride,
+    variant === "action" && resolvedState === "disabled" && $actionDisabledTextStyleOverride,
   ]
 
   const $faceModeStyle: ViewStyle = {
-    justifyContent: mode === "action" ? "center" : "flex-start",
-    gap: mode === "action" ? 0 : 8,
-    paddingHorizontal: mode === "action" ? 0 : 16,
+    justifyContent: variant === "action" ? "center" : "flex-start",
+    gap: variant === "action" ? 0 : 8,
+    paddingHorizontal: variant === "action" ? 0 : 16,
   }
 
   const $leftAccessoryStyle: ViewStyle = {
@@ -278,7 +316,7 @@ export function Button(props: ButtonProps) {
         <Animated.View style={[$topShellBase, $shellAnimatedStyle]}>
           <Pressable
             accessibilityRole="button"
-            accessibilityState={{ disabled: isDisabled, selected: state === "selected" }}
+            accessibilityState={{ disabled: isDisabled, selected: resolvedState === "selected" }}
             onPressIn={handlePressIn}
             onPressOut={handlePressOut}
             disabled={isDisabled}
@@ -293,7 +331,7 @@ export function Button(props: ButtonProps) {
                   $surfaceAnimatedStyle,
                   // (pressed || mode === "disabled") && $pressedBottomBorder,
                   pressed && $pressedViewStyleOverride,
-                  mode === "disabled" && $disabledViewStyleOverride,
+                  resolvedState === "disabled" && $disabledViewStyleOverride,
                 ]}
               >
                 {!!LeftAccessory && (
@@ -312,8 +350,10 @@ export function Button(props: ButtonProps) {
                     $textModeStyle,
                     $textAnimatedStyle,
                     pressed && $pressedTextStyleOverride,
-                    mode === "disabled" && $disabledTextStyleOverride,
-                    { textAlign: mode === "action" ? "center" : "left" },
+                    resolvedState === "disabled" && $disabledTextStyleOverride,
+                    {
+                      textAlign: variant === "action" ? "center" : "left",
+                    },
                   ]}
                 >
                   {children}
@@ -332,6 +372,23 @@ export function Button(props: ButtonProps) {
         </Animated.View>
       </Animated.View>
     </View>
+  )
+}
+
+export function Button(props: ButtonProps) {
+  const { state = "default", ...rest } = props
+  return <InternalButton {...rest} variant="standard" state={state} />
+}
+
+export function ActionButton(props: ActionButtonProps) {
+  const { actionDisabledTextStyle, ...rest } = props
+  return (
+    <InternalButton
+      {...rest}
+      variant="action"
+      state={props.disabled ? "disabled" : "default"}
+      actionDisabledTextStyle={actionDisabledTextStyle}
+    />
   )
 }
 
