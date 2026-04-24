@@ -80,7 +80,6 @@ const $container: ViewStyle = {
 
 const $content: ViewStyle = {
   flex: 1,
-  paddingTop: 22,
 }
 
 const $footer = (theme: any): ViewStyle => ({

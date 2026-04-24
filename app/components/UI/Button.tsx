@@ -251,6 +251,12 @@ export function Button(props: ButtonProps) {
     mode === "disabled" && $disabledTextStyleOverride,
   ]
 
+  const $faceModeStyle: ViewStyle = {
+    justifyContent: mode === "action" ? "center" : "flex-start",
+    gap: mode === "action" ? 0 : 8,
+    paddingHorizontal: mode === "action" ? 0 : 16,
+  }
+
   const $leftAccessoryStyle: ViewStyle = {
     marginEnd: theme.spacing.xs,
     zIndex: 1,
@@ -282,9 +288,10 @@ export function Button(props: ButtonProps) {
               <Animated.View
                 style={[
                   $faceBase,
+                  $faceModeStyle,
                   $faceSizeOverride,
                   $surfaceAnimatedStyle,
-                  (pressed || mode === "disabled") && $pressedBottomBorder,
+                  // (pressed || mode === "disabled") && $pressedBottomBorder,
                   pressed && $pressedViewStyleOverride,
                   mode === "disabled" && $disabledViewStyleOverride,
                 ]}
@@ -306,6 +313,7 @@ export function Button(props: ButtonProps) {
                     $textAnimatedStyle,
                     pressed && $pressedTextStyleOverride,
                     mode === "disabled" && $disabledTextStyleOverride,
+                    { textAlign: mode === "action" ? "center" : "left" },
                   ]}
                 >
                   {children}
@@ -372,6 +380,3 @@ const $bottomSlabStyle: ViewStyle = {
   borderBottomRightRadius: SHELL_RADIUS,
 }
 
-const $pressedBottomBorder: ViewStyle = {
-  borderBottomWidth: 1,
-}

@@ -82,6 +82,12 @@ export const colors = {
    * Error Background.
    */
   errorBackground: palette.angry100,
+  stepGradientTop: "#00C1FF",
+  stepGradientMiddle: "#63D4F8",
+  stepGradientBottom: palette.neutral100,
+  talkBubbleSurface: palette.neutral100,
+  talkBubbleOutline: "#E6E6E6",
+  talkBubbleText: "#000E34",
   buttonDefaultSurface: "#FFFFFF",
   buttonDefaultOutline: "#D8E0E9",
   buttonDefaultText: "#211A4C",

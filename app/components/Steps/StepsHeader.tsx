@@ -12,6 +12,8 @@ interface StepsHeaderProps {
     onBackPress?: () => void
 }
 
+export const STEPS_HEADER_BAR_HEIGHT = 56
+
 export function StepsHeader({ progress, showBackButton = false, onBackPress }: StepsHeaderProps) {
     const { themed } = useAppTheme()
 
