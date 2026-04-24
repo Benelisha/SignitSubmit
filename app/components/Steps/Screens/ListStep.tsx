@@ -12,75 +12,69 @@ import { spacing } from "@/theme/spacing"
 import { ComponentType, useMemo } from "react"
 import { useStepContext } from "@/context/StepContext"
 import { useLang } from "@/context/LangContext"
-import { OnboardingOption } from "@/services/onboarding/types"
+import { NativeStackScreenProps } from "@react-navigation/native-stack"
+import { StepsParamList } from "@/navigators/StepsNavigation"
 
 const WIDE_LAYOUT_BREAKPOINT = 720
 
-export function QuestionStep() {
+type ListStepProps = NativeStackScreenProps<StepsParamList, "list">
+
+export function ListStep({ route }: ListStepProps) {
   const { themed } = useAppTheme()
   const { lang } = useLang()
-  // const [state, setState] = useState<ButtonState>("default")
   const { width } = useWindowDimensions()
   const isWide = width >= WIDE_LAYOUT_BREAKPOINT
-
-  const { isLoading, responses, setResponses, activeStepId, data } = useStepContext();
+  const stepId = route.params?.stepId
   
-  const stepData = useMemo(() => {
-    if (!data || !activeStepId) return null
-    const step = data.steps.find((step) => step.id === activeStepId)
-    if (!step) return null
-    return step
-  }, [data, activeStepId])
-
-  const selectedOptionIds = useMemo(() => {
-    return responses?.responses.find((r) => r.stepId === activeStepId)?.selectedOptionIds ?? []
-  }, [responses, activeStepId])
-
-  // Build stable LeftAccessory components per option so React never unmounts/remounts them.
-  // Keep this hook above any conditional return to preserve hook call order.
+  const { data, setData } = useStepContext()
+  const stepData = data?.onboardingFlow?.steps?.find((step: any) => step._id === stepId)
+  
+  // Avoid react mount and remove, so the icon wont flash
   const optionAccessories = useMemo(() => {
     const map = new Map<string, ComponentType<ButtonAccessoryProps>>()
     if (!stepData) return map
 
     for (const option of stepData.options) {
+      const optionId = option._id
       const uri = option.imgUrl ?? ""
-      map.set(option.id, ({ style }: ButtonAccessoryProps) => <Image uri={uri} style={[style, $signalIcon]} />)
+      map.set(optionId, ({ style }: ButtonAccessoryProps) => <Image uri={uri} style={[style, $signalIcon]} />)
     }
     return map
   }, [stepData])
 
-  const handleOptionPress = (option: OnboardingOption) => {
-    if (!activeStepId) return
+  const handleOptionPress = (_option: any) => {
+    console.log('[ListStep.tsx]', "Option pressed:", _option)
+    console.log('[ListStep.tsx]', "Data:", data)
+    const updatedData = { ...data };
 
-    const isSelected = selectedOptionIds.includes(option.id)
-    setResponses((prev) => {
-      const existing = prev?.responses ?? []
-      const others = existing.filter((r) => r.stepId !== activeStepId)
-      if (isSelected) return { responses: others }
-      return { responses: [...others, { stepId: activeStepId, selectedOptionIds: [option.id] }] }
-    })
+    const stepId = _option.stepId;
+    // Find the step item and mark its selected
+    const stepData = updatedData.onboardingFlow.steps.find((step: any) => step._id === stepId)
+    if (stepData.__selectedOption === _option._id)
+      stepData.__selectedOption = undefined;
+    else
+      stepData.__selectedOption = _option._id;
+    
+    setData(updatedData)
   }
 
-  // console.log('lang', lang)
-  // console.log('stepData', responses)
-
   // Avoid no data
-  if (!stepData || isLoading)
-    return <StepScreenLayout style={themed($stepContainer)} contentStyle={themed($stepContent)}>
-      <View></View>
-    </StepScreenLayout>;
+  if (!stepData)
+    return <StepScreenLayout style={themed($stepContainer)} contentStyle={themed($stepContent)}><View /></StepScreenLayout>
 
 
-  const imageURL = stepData.assets.image1
-  const bubbleText = stepData.content[lang].text1;
-  const options = stepData.options;
+  const imageURL = stepData.assets?.image1 ?? ""
+  const bubbleText = stepData.content?.[lang]?.text1 ?? ""
+  const options = stepData.options ?? []
   // Render screen
   return (
     <StepScreenLayout style={themed($stepContainer)} contentStyle={themed($stepContent)}>
       <View style={[themed($heroGroup), isWide ? $heroGroupWide : $heroGroupNarrow]}>
+        {/* ---=== HERO ===--- */}
         <FadeInFadeOut style={themed($imageFrame)}>
           <Image uri={imageURL} style={themed($image)} />
         </FadeInFadeOut>
+        {/* ---=== TEXT BUBBLE ===--- */}
         <FadeInOutScale
           inDelay={90}
           outDelay={40}
@@ -96,13 +90,15 @@ export function QuestionStep() {
         </FadeInOutScale>
       </View>
 
-      {options.map((option, index) => {
-        const isSelected = selectedOptionIds.includes(option.id)
-        const LeftAccessory = optionAccessories.get(option.id)
-        return <FadeInFadeOut key={option.id} inDelay={150 + index * 80} style={$button}>
+      {/* ---=== List Options ===--- */}
+      {options.map((option: any, index: number) => {
+        const optionId = option._id
+        const isSelected = stepData.__selectedOption === optionId
+        const LeftAccessory = optionAccessories.get(optionId)
+        return <FadeInFadeOut key={optionId} inDelay={150 + index * 80} style={$button}>
           <Button
             state={isSelected ? "selected" : "default"}
-            text={option.translations[lang]}
+            text={option.translations?.[lang] ?? option.translations?.en ?? ""}
             textStyle={themed($buttonText)}
             LeftAccessory={LeftAccessory}
             onPress={() => handleOptionPress(option)}
@@ -165,11 +161,11 @@ const $stepContent: ViewStyle = {
 
 const $button: ViewStyle = {
   marginBottom: spacing.md,
-  maxHeight: 56,
+  maxHeight: 52,
   maxWidth: 420,
   width: "100%",
   alignSelf: "center",
-  marginVertical: spacing.sm,
+  marginVertical: spacing.md,
 }
 
 const $buttonText = (theme: any): TextStyle => ({

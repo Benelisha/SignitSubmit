@@ -11,52 +11,46 @@ import type { Theme } from "@/theme/types"
 import { useStepContext } from "@/context/StepContext"
 import { useLang } from "@/context/LangContext"
 import { useMemo } from "react"
+import { NativeStackScreenProps } from "@react-navigation/native-stack"
+import { StepsParamList } from "@/navigators/StepsNavigation"
 
-export function JourneyStep() {
+type JourneyStepProps = NativeStackScreenProps<StepsParamList, "englishJourney">
+
+export function JourneyStep({ route }: JourneyStepProps) {
   const { themed } = useAppTheme()
   const { lang } = useLang()
-  const { responses, activeStepId, data } = useStepContext()
-
-  const stepData = useMemo(() => {
-    if (!data) return null
-
-    const findStep = (id?: string | null) => {
-      if (!id) return null
-      return data.steps.find((step) => step.id === id) ?? null
-    }
-
-    const fallbackStep = findStep(activeStepId)
-
-    const latestResponse = responses?.responses.at(-1)
-    if (!latestResponse) return fallbackStep
-
-    const sourceStep = findStep(latestResponse.stepId)
-    if (!sourceStep) return fallbackStep
-
-    const matchedNextStep = sourceStep.nextSteps.find((nextStep) => {
-      if (nextStep.conditions.length === 0) return true
-      return nextStep.conditions.some(
-        (condition) =>
-          condition.stepId === latestResponse.stepId && latestResponse.selectedOptionIds.includes(condition.optionId),
-      )
-    })
-
-    if (!matchedNextStep) return fallbackStep
-
-    return findStep(matchedNextStep.nextStepId) ?? fallbackStep
-  }, [data, responses, activeStepId])
-
-  const copy = stepData?.content[lang] ?? stepData?.content.en
-  const title = copy?.text1 ?? ""
-  const body = copy?.text2 ?? ""
-  const bodyParts = useMemo(() => body.split(/(\*[^*]+\*)/g).filter(Boolean), [body])
-
-  console.log("JourneyStep render", stepData)
+  const { data } = useStepContext()
+  const stepId = route.params?.stepId
+  
+  // DATA
+  const stepData = data?.onboardingFlow?.steps?.find((step: any) => step._id === stepId)
+  // Break to texts
+  console.log("[JourneyStep.tsx]", "data", stepData)
+  const title = stepData?.content[lang]?.text1 ??  ""
+  const body: string = stepData?.content[lang]?.text2 ?? ""
+  const chartTitle = stepData?.content?.[lang]?.text3 ?? stepData?.content?.en?.text3 ?? ""
+  const chartBubble1 = stepData?.content?.[lang]?.text4 ?? stepData?.content?.en?.text4 ?? ""
+  const chartBubble2 = stepData?.content?.[lang]?.text5 ?? stepData?.content?.en?.text5 ?? ""
+  const chartBubble3 = stepData?.content?.[lang]?.text6 ?? stepData?.content?.en?.text6 ?? ""
+  const chartWhen = stepData?.content?.[lang]?.text7 ?? stepData?.content?.en?.text7 ?? ""
+  const chartTime = stepData?.content?.[lang]?.text8 ?? stepData?.content?.en?.text8 ?? ""
+  // const bodyParts = useMemo<string[]>(() => body.split(/(\*[^*]+\*)/g).filter(Boolean), [body])
+  const bodyParts = body.split(/(\*[^*]+\*)/g).filter(Boolean)
 
   return (
     <StepScreenLayout background={<GradientBG />} style={themed($stepContainer)} contentStyle={$content}>
-      <Chart />
+      
+      {/* ---=== Chart ===--- */}
+      <Chart 
+        txTitle={chartTitle}
+        txWhen={chartWhen}
+        txTime={chartTime}
+        txBubble1={chartBubble1}
+        txBubble2={chartBubble2}
+        txBubble3={chartBubble3}
+      />
 
+      {/* ---=== Bottom Texts ===--- */}
       <View style={{ flex: 1, maxWidth: 650, justifyContent: "center", alignSelf: "center", paddingHorizontal: spacing.lg, gap: 24 }}>
         <FadeInFadeOut in="left" inDelay={800} style={$spaceBottom}>
           <Text preset="heading" text={title} />
@@ -66,7 +60,6 @@ export function JourneyStep() {
             {bodyParts.map((part, index) => {
               const isHighlighted = part.startsWith("*") && part.endsWith("*")
               if (!isHighlighted) return part
-
               return (
                 <Text key={`${part}-${index}`} preset="subheading" style={themed($subheadingHighlight)}>
                   {part.slice(1, -1)}

@@ -1,66 +1,53 @@
-import { useMemo } from "react"
 import { createNativeStackNavigator } from "@react-navigation/native-stack"
 import {
   NavigationContainer,
   NavigationContainerRef,
   NavigationIndependentTree,
-  NavigationState,
-  ParamListBase,
 } from "@react-navigation/native"
+import { ListStep as ListStep } from "@/components/Steps/Screens/ListStep"
+import { JourneyStep } from "@/components/Steps/Screens/JourneyStep"
 
-export interface StepItem {
-  id: string
-  render: () => React.ReactNode
+export type StepsParamList = {
+  list: { stepId: string }
+  englishJourney: { stepId: string }
 }
-
-export type StepsParamList = ParamListBase
 export type StepsNavigationRef = NavigationContainerRef<StepsParamList>
 
 const Stack = createNativeStackNavigator<StepsParamList>()
 
 interface StepsNavigationProps {
-  steps: StepItem[]
   navigationRef: React.RefObject<StepsNavigationRef | null>
-  onIndexChange: (index: number) => void
+  onIndexChange: () => void
+  initialStepId?: string | null
 }
 
-export function StepsNavigation({ steps, navigationRef, onIndexChange }: StepsNavigationProps) {
-  const initialRouteName = useMemo(() => steps[0]?.id, [steps])
-
-  if (!initialRouteName) return null
-
-  const syncIndexFromState = (state?: NavigationState) => {
-    if (!state) return
-
-    const routeName = state.routes[state.index]?.name
-    const nextIndex = steps.findIndex((step) => step.id === routeName)
-
-    if (nextIndex >= 0) {
-      onIndexChange(nextIndex)
-    }
-  }
-
+export function StepsNavigation({ navigationRef, onIndexChange, initialStepId }: StepsNavigationProps) {
   return (
     <NavigationIndependentTree>
       <NavigationContainer
         ref={navigationRef}
-        onReady={() => {
-          onIndexChange(0)
-        }}
-        onStateChange={syncIndexFromState}
+        onReady={onIndexChange}
+        onStateChange={onIndexChange}
       >
         <Stack.Navigator
           screenOptions={{
             headerShown: false,
-            animation: "slide_from_right",
+            animation: "none",
           }}
-          initialRouteName={initialRouteName}
+          initialRouteName={"list"}
         >
-          {steps.map((step) => (
-            <Stack.Screen key={step.id} name={step.id}>
-              {() => <>{step.render()}</>}
-            </Stack.Screen>
-          ))}
+          <Stack.Screen
+            key={"list"}
+            name={"list"}
+            component={ListStep}
+            initialParams={initialStepId ? { stepId: initialStepId } : undefined}
+          />
+          <Stack.Screen
+            key={"englishJourney"}
+            name={"englishJourney"}
+            component={JourneyStep}
+            initialParams={initialStepId ? { stepId: initialStepId } : undefined}
+          />
         </Stack.Navigator>
       </NavigationContainer>
     </NavigationIndependentTree>

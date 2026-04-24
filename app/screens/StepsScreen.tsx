@@ -1,20 +1,20 @@
-import { useRef, useState } from "react"
-import { StyleSheet, View, ViewStyle } from "react-native"
-import { CommonActions } from "@react-navigation/native"
+import { useEffect, useRef, useState } from "react"
+import { View, ViewStyle } from "react-native"
+import { CommonActions, StackActions } from "@react-navigation/native"
 
 import { StepsHeader } from "@/components/Steps/StepsHeader"
 import { ActionButton } from "@/components/UI/Button"
-import { QuestionStep } from "@/components/Steps/Steps/QuestionStep"
-import { JourneyStep } from "@/components/Steps/Steps/JourneyStep"
-import { StepItem, StepsNavigation, StepsNavigationRef } from "@/navigators/StepsNavigation"
+import { StepsNavigation, StepsNavigationRef, StepsParamList } from "@/navigators/StepsNavigation"
 import { useAppTheme } from "@/theme/context"
 import { StepProvider, useStepContext } from "@/context/StepContext"
 import { useLang } from "@/context/LangContext"
 
-const STEPS: StepItem[] = [
-  { id: "step-1", render: () => <QuestionStep /> },
-  { id: "step-2", render: () => <JourneyStep /> },
-]
+// Implanted on the data for user selections
+export type OnboardingDataType = {
+  SelectedOption?: string
+  IsStepSatisfied?: boolean
+}
+
 
 export function StepsScreen() {
   return (
@@ -26,53 +26,108 @@ export function StepsScreen() {
 
 function StepsScreenContent() {
   const { themed } = useAppTheme()
+  const { isLoading, data, activeStepId, setActiveStepId } = useStepContext()
   const navigationRef = useRef<StepsNavigationRef>(null)
-  const { isLoading, data, activeStepId, responses } = useStepContext()
   const { lang } = useLang()
+  const [progress, setProgress] = useState(30)
 
-  const handleNext = () => {
-    const isFirstStep = activeStepId === data?.steps?.[0]?.id;
-    // move to next
-    if (isFirstStep && navigationRef.current?.isReady()) {
-      navigationRef.current.navigate("step-2")
+
+  // Set the default value
+  useEffect(() => {
+    if (isLoading || !data) return
+    if (!activeStepId)
+      setActiveStepId(data?.onboardingFlow.steps?.[0]?._id)
+  }, [isLoading, data, activeStepId])
+
+
+  const handleIndexChange = () => {
+    const route = navigationRef.current?.getCurrentRoute()
+    const routeStepId = (route?.params as { stepId?: string } | undefined)?.stepId
+    if (routeStepId && routeStepId !== activeStepId)
+      setActiveStepId(routeStepId)
+  }
+
+
+  const handleContinuePress = () => {
+    const activeStepData = data?.onboardingFlow.steps?.find((step: any) => step._id === activeStepId)
+    if (!activeStepData) return
+
+    const currComp = activeStepData.componentType;
+    if ('list' === currComp && activeStepData.__selectedOption) {
+      const selectedOptionId = activeStepData.__selectedOption;
+      // Find the next step based on the conditions
+      const nextStepId = activeStepData.nextSteps?.find((next: any) =>
+        next?.conditions?.some((condition: any) => condition.optionId === selectedOptionId),
+      )?.nextStepId;
+      if (nextStepId) {
+        const currentStep = data?.onboardingFlow.steps?.find((step: any) => step._id === nextStepId)
+        if (!currentStep?._id) return
+
+        // Push creates a real history entry, so iOS swipe-back works for non-default steps.
+        navigationRef.current?.dispatch(StackActions.push(currentStep.componentType as keyof StepsParamList, {
+          stepId: currentStep._id,
+        }))
+        setActiveStepId(nextStepId)
+        setProgress(100)
+      }
+    }
+
+    if ('englishJourney' === currComp) {
+      const currentStep = data?.onboardingFlow.steps?.[0]
+      if (!currentStep?._id) return
+
+      // Default step should have no back history.
+      navigationRef.current?.dispatch(
+        CommonActions.reset({
+          index: 0,
+          routes: [
+            {
+              name: currentStep.componentType as keyof StepsParamList,
+              params: { stepId: currentStep._id },
+            },
+          ],
+        }),
+      )
+      setActiveStepId(currentStep._id)
+      setProgress(30)
     }
   }
 
-  const handleBack = () => {
-    if (!navigationRef.current?.isReady() || activeStepId === data?.steps?.[0]?.id) return
+  const handleBackPress = () => {
+    if (!navigationRef.current?.isReady()) return
+    if (!navigationRef.current.canGoBack()) return
     navigationRef.current.goBack()
   }
 
-  const actionButtonText = isLoading ? "LOADING" : data?.defaults?.ctaText[lang] || "LOADING";
-  const activeStepData = data?.steps.find(step => step.id === activeStepId);
-  const canContinue =
-    // no data or no options means nothing to answer, so allow continue
-    !activeStepData || activeStepData.options.length === 0 ||
-    // Is Step has response
-    responses?.responses.some(r => r.stepId === activeStepId)
+
+  const actionButtonText = isLoading ? "LOADING" : data?.onboardingFlow.defaults?.ctaText[lang] || "LOADING";
+  const activeStepData = activeStepId ? data?.onboardingFlow.steps?.find((step: any) => step._id === activeStepId) : null;
+  const canContinue = !activeStepData || activeStepData.__selectedOption || activeStepData.componentType === 'englishJourney'
 
   return (
     <View style={$container}>
 
       <StepsHeader
         showBackButton
-        progress={10}
-        onBackPress={handleBack}
+        progress={progress}
+        onBackPress={handleBackPress}
       />
 
-      <View style={$content}>
-        <StepsNavigation
-          steps={STEPS}
-          navigationRef={navigationRef}
-          onIndexChange={() => { }}
-        />
-      </View>
+
+      {activeStepId &&
+        <View style={$content}>
+          <StepsNavigation
+            navigationRef={navigationRef}
+            initialStepId={activeStepId}
+            onIndexChange={handleIndexChange}
+          />
+        </View>
+      }
 
       <View style={themed($footer)}>
         <ActionButton
           text={actionButtonText}
-          onPress={handleNext}
-          textStyle={{ color: "#FFFFFF" }}
+          onPress={handleContinuePress}
           style={$footerButton}
           disabled={isLoading || !canContinue}
         />
@@ -99,9 +154,6 @@ const $footer = (theme: any): ViewStyle => ({
   paddingHorizontal: 24,
   paddingBottom: 40,
   paddingTop: 16,
-  backgroundColor: theme.colors.background,
-  borderTopWidth: StyleSheet.hairlineWidth,
-  borderTopColor: theme.colors.separator,
 })
 
 const $footerButton: ViewStyle = {

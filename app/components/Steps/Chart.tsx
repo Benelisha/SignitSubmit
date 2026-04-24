@@ -23,15 +23,19 @@ const CHART_EDGE_LABEL_COLOR = "#999999"
 const CHART_MAX_WIDTH = 340
 const CHART_HORIZONTAL_SCREEN_PADDING = 32
 const CHART_ANIMATION_SPEED_FACTOR = 0.5
-const CHART_BUBBLE_TEXT: Record<ChartCirclePoint["id"], string> = {
-    start: "Start",
-    middle: "Middle",
-    end: "End",
-}
 
 type BubbleSizeMap = Partial<Record<ChartCirclePoint["id"], { width: number; height: number }>>
 
-export function Chart() {
+interface ChartProps {
+    txTitle: string
+    txWhen: string
+    txTime: string
+    txBubble1: string
+    txBubble2: string
+    txBubble3: string
+}
+
+export function Chart({ txTitle, txWhen, txTime, txBubble1, txBubble2, txBubble3 }: ChartProps) {
     const { themed, theme } = useAppTheme()
     const { width: screenWidth } = useWindowDimensions()
     const [bubbleSizes, setBubbleSizes] = useState<BubbleSizeMap>({})
@@ -87,6 +91,12 @@ export function Chart() {
         ],
     }
 
+    const bubbleTextById: Record<ChartCirclePoint["id"], string> = {
+        start: txBubble1,
+        middle: txBubble2,
+        end: txBubble3,
+    }
+
     return (
         <FadeInOutScale
             inDelay={60 * CHART_ANIMATION_SPEED_FACTOR}
@@ -96,9 +106,9 @@ export function Chart() {
             <ChartBG style={$backgroundImage} />
             <View pointerEvents="none" style={overlayTransform}>
                 {/* Text labels — positioned in viewBox coordinates */}
-                <Text preset="heading" text="English journey" style={themed($chartHeading)} />
-                <Text style={[themed($chartEdgeLabel), $chartNowLabel]}>Now</Text>
-                <Text style={[themed($chartEdgeLabel), $chartDaysLabel]}>27 Days</Text>
+                <Text preset="heading" text={txTitle} style={themed($chartHeading)} />
+                <Text style={[themed($chartEdgeLabel), $chartNowLabel]}>{txWhen}</Text>
+                <Text style={[themed($chartEdgeLabel), $chartDaysLabel]}>{txTime}</Text>
 
                 {/* Bubbles — anchored to the known circle cx/cy in viewBox space */}
                 {CHART_CIRCLE_POINTS.map((point, index) => {
@@ -127,7 +137,7 @@ export function Chart() {
                         >
                             <View onLayout={handleBubbleLayout(point.id)}>
                                 <ChartBubble
-                                    text={CHART_BUBBLE_TEXT[point.id]}
+                                    text={bubbleTextById[point.id]}
                                     arrowPosition="down"
                                     arrowTranslateX={Math.max(bubbleWidth / 2 - 28, 0)}
                                     textColor={point.id === "end" ? theme.colors.stepGradientMiddle : undefined}

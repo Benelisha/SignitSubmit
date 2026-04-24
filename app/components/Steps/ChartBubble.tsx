@@ -49,7 +49,7 @@ export function ChartBubble({
 
 const $bubble = (_theme: Theme): ViewStyle => ({
     position: "relative",
-    paddingHorizontal: spacing.md,
+    paddingHorizontal: spacing.xs,
     paddingVertical: spacing.xs,
     backgroundColor: "#FFFFFF",
     borderWidth: 2,
@@ -68,13 +68,13 @@ const $bubble = (_theme: Theme): ViewStyle => ({
 
 const $text = (theme: Theme): TextStyle => ({
     fontFamily: theme.typography.primary.bold,
-    fontSize: theme.typography.sizes.xxs.fontSize,
-    lineHeight: theme.typography.sizes.xxs.lineHeight,
+    fontSize: theme.typography.sizes.xxs.fontSize -2,
+    lineHeight: theme.typography.sizes.xxs.lineHeight -2,
     letterSpacing: 0,
     textAlign: "center",
     textAlignVertical: "center",
     textTransform: "uppercase",
-    fontVariant: ["lining-nums", "proportional-nums"],
+    maxWidth: 90,
 })
 
 const $arrowBase: ViewStyle = {
