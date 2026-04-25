@@ -1,4 +1,4 @@
 
-> singit-solution@0.0.1 compile /Users/doronbenelisha/Benlish/SignitSubmit
+> singit-solution@0.0.1 compile /Users/doronbenelisha/Benlish/SingitSubmit
 > tsc --noEmit -p . --pretty
 
