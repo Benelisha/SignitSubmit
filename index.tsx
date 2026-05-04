@@ -1,9 +1,31 @@
-import "@expo/metro-runtime" // this is for fast refresh on web w/o expo-router
+import "@expo/metro-runtime"
 import { registerRootComponent } from "expo"
-
+import { SplashScreen } from "expo-splash-screen"
 import { App } from "@/app"
 
-// registerRootComponent calls AppRegistry.registerComponent('main', () => App);
-// It also ensures that whether you load the app in Expo Go or in a native build,
-// the environment is set up appropriately
 registerRootComponent(App)
+
+async function initSplash() {
+  // Prevent automatic hide only if the method exists
+  if (SplashScreen?.preventAutomaticHideAsync) {
+    try {
+      await SplashScreen.preventAutomaticHideAsync()
+    } catch (e) {
+      console.warn("Failed to prevent automatic hide:", e)
+    }
+  }
+
+  // Simulate async work (2 seconds)
+  await new Promise(resolve => setTimeout(resolve, 2000))
+
+  // Hide splash
+  if (SplashScreen?.hideAsync) {
+    try {
+      await SplashScreen.hideAsync()
+    } catch (e) {
+      console.warn("Failed to hide splash:", e)
+    }
+  }
+}
+
+initSplash().catch(console.warn)

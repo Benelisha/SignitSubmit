@@ -5,6 +5,7 @@ import Config from "@/config"
 import { ErrorBoundary } from "@/screens/ErrorScreen/ErrorBoundary"
 import { useAppTheme } from "@/theme/context"
 import StepsScreen from "@/screens/StepsScreen"
+import HomeScreen from "@/screens/HomeScreen"
 import { useLang } from "@/context/LangContext"
 
 export type AppStackParamList = {
