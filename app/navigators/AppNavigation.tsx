@@ -5,10 +5,13 @@ import Config from "@/config"
 import { ErrorBoundary } from "@/screens/ErrorScreen/ErrorBoundary"
 import { useAppTheme } from "@/theme/context"
 import StepsScreen from "@/screens/StepsScreen"
+import { SplashScreen } from "@/screens/SplashScreen"
+import { GameStackNavigator } from "./GameStackNavigator"
 import { useLang } from "@/context/LangContext"
 
 export type AppStackParamList = {
   Steps: undefined
+  SplashScreen: undefined
 }
 
 export interface AppNavigationProps
@@ -30,11 +33,12 @@ const AppStack = () => {
           backgroundColor: colors.background,
         },
       }}
-      initialRouteName="Steps"
+      initialRouteName="SplashScreen"
     >
+      <Stack.Screen name="SplashScreen" component={SplashScreen} />
       <Stack.Screen name="Steps" component={StepsScreen} />
-    </Stack.Navigator>
-  )
+     </Stack.Navigator>
+   )
 }
 
 export function AppNavigation(props: AppNavigationProps) {
@@ -44,8 +48,8 @@ export function AppNavigation(props: AppNavigationProps) {
   return (
     <NavigationContainer theme={navigationTheme} {...props}>
       <ErrorBoundary catchErrors={Config.catchErrors}>
-        <AppStack />
-      </ErrorBoundary>
-    </NavigationContainer>
-  )
+        <GameStackNavigator />
+       </ErrorBoundary>
+     </NavigationContainer>
+   )
 }

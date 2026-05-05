@@ -58,6 +58,11 @@ interface BaseButtonProps extends PressableProps {
 
 export interface ButtonProps extends BaseButtonProps {
   state?: ButtonState
+  /**
+   * Optional callback to be invoked when the button is pressed.
+   * This will be called after a 0.3s delay to allow animations to complete.
+   */
+  onPress?: () => void
 }
 
 export interface ActionButtonProps extends Omit<BaseButtonProps, "pressedTextStyle"> {
@@ -174,10 +179,11 @@ function InternalButton(
     actionDisabledTextStyle: $actionDisabledTextStyleOverride,
     shadowColor,
     depth = BUTTON_DEPTH,
+    onPress,
     onPressIn,
     onPressOut,
-    ...rest
-  } = props
+      ...rest
+     } = props
 
   const { theme } = useAppTheme()
   const flatStyle = StyleSheet.flatten($styleOverride) ?? {}
@@ -232,6 +238,17 @@ function InternalButton(
     color: interpolateColor(modeProgress.value, [0, 1, 2], textColors),
   }))
 
+  const {
+    height,
+    minHeight,
+    maxHeight,
+    padding,
+    paddingVertical,
+    paddingTop,
+    paddingBottom,
+    ...$wrapperStyleRest
+  } = flatStyle
+
   const handlePressIn = useCallback(
     (e: any) => {
       if (!isDisabled) {
@@ -247,24 +264,16 @@ function InternalButton(
   )
 
   const handlePressOut = useCallback(
-    (e: any) => {
+     (e: any) => {
       pressOffset.value = withSpring(restingOffset, { damping: 54, stiffness: 820 })
+       // Delay the onPress callback by 300ms to allow animations to complete
+      setTimeout(() => {
+        onPress?.(e)
+       }, 300)
       onPressOut?.(e)
-    },
-    [onPressOut, pressOffset, restingOffset],
-  )
-
-  const {
-    height,
-    minHeight,
-    maxHeight,
-    padding,
-    paddingVertical,
-    paddingTop,
-    paddingBottom,
-    ...$wrapperStyleRest
-  } = flatStyle
-
+      },
+     [onPress, onPressOut, pressOffset, restingOffset]
+   )
   const $wrapperStyle: StyleProp<ViewStyle> = [$outerWrapper, { paddingBottom: depth }, $wrapperStyleRest]
 
   const $faceSizeOverride: ViewStyle = {

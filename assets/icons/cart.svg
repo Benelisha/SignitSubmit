@@ -1,0 +1,5 @@
+<!-- Cart Icon -->
+<svg width="24" height="24" viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg">
+  <path d="M7 18V6a2 2 0 0 1 2-2h6a2 2 0 0 1 2 2v12a2 2 0 0 1-2 2H9a2 2 0 0 1-2-2z" fill="currentColor"/>
+  <path d="M4 6h16M6 6V4a2 2 0 0 1 2-2h8a2 2 0 0 1 2 2v2" fill="currentColor"/>
+</svg>
