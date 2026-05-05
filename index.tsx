@@ -1,3 +1,4 @@
+import "regenerator-runtime/runtime"
 import "@expo/metro-runtime" // this is for fast refresh on web w/o expo-router
 import { registerRootComponent } from "expo"
 
