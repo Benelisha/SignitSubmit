@@ -1,236 +1,155 @@
-import React, { useEffect } from "react"
-import { View, StyleSheet, Dimensions } from "react-native"
+import React, { useCallback } from "react"
+import { View, StyleSheet, Dimensions, TouchableOpacity } from "react-native"
 import { GameEngine } from "react-native-game-engine"
 
-// Define game entities
-interface Entity {
-  id: string
-  position: { x: number; y: number }
-  velocity: { x: number; y: number }
-  color?: string
-  size?: number
-}
+// Entity renderer component used by GameEngine — props are spread directly from entity data
+const EntityRenderer = ({ color, size, position }: { color?: string; size?: number; position: { x: number; y: number } }) => (
+  <View
+    style={[
+      styles.entity,
+      {
+        backgroundColor: color || "#fff",
+        width: size || 20,
+        height: size || 20,
+        left: position.x,
+        top: position.y,
+      },
+    ]}
+  />
+)
 
-// Player entity
-const createPlayer = (): Entity => ({
-  id: "player",
-  position: { x: 100, y: 100 },
-  velocity: { x: 0, y: 0 },
-  color: "#00ff00",
-  size: 30,
-})
-
-// Enemy entity
-const createEnemy = (id: string): Entity => ({
-  id,
-  position: { x: Math.random() * 300, y: Math.random() * 400 },
-  velocity: { x: (Math.random() - 0.5) * 2, y: (Math.random() - 0.5) * 2 },
-  color: "#ff0000",
-  size: 20,
-})
-
-// Physics system - updates entity positions
-const physicsSystem = {
-  update: (entities: Entity[], deltaTime: number) => {
-    return entities.map((entity) => ({
+// Physics system — moves entities based on velocity
+const physicsSystem = (entities: any, { time }: { time: { delta: number } }) => {
+  const delta = time.delta / 1000
+  return Object.keys(entities).reduce((acc: any, key) => {
+    const entity = entities[key]
+    if (entity.position && entity.velocity) {
+      acc[key] = {
         ...entity,
-      position: {
-        x: entity.position.x + entity.velocity.x * deltaTime,
-        y: entity.position.y + entity.velocity.y * deltaTime,
+        position: {
+          x: entity.position.x + entity.velocity.x * delta,
+          y: entity.position.y + entity.velocity.y * delta,
         },
-      }))
-    },
+      }
+    } else {
+      acc[key] = entity
+    }
+    return acc
+  }, {})
 }
 
-// Collision detection system
-const collisionSystem = {
-  update: (entities: Entity[]) => {
-    return entities.map((entity) => {
-      if (entity.id === "player") {
-          // Simple boundary collision
-        const width = 400
-        const height = 600
-        return {
-            ...entity,
-          velocity: {
-            x: entity.position.x <= 0 ? Math.abs(entity.velocity.x) : entity.velocity.x,
-            y: entity.position.y <= 0 ? Math.abs(entity.velocity.y) : entity.velocity.y,
-            },
-          }
-        }
-      return entity
-      })
-    },
+// Player control system — handles dispatched touch events
+const playerControlSystem = (entities: any, { events }: { events: any[] }) => {
+  if (!events || !events.length) return entities
+  const player = entities.player
+  if (!player) return entities
+
+  let updated = player
+  events.forEach((event) => {
+    if (event.type === "player-move") {
+      updated = { ...updated, velocity: event.velocity }
+    } else if (event.type === "player-stop") {
+      updated = { ...updated, velocity: { x: 0, y: 0 } }
+    }
+  })
+  return { ...entities, player: updated }
 }
 
-// Render system
-const renderSystem = {
-  update: (entities: Entity[]) => {
-    return entities
-    },
+// Boundary collision system — keeps entities in the game area
+const collisionSystem = (entities: any) => {
+  return Object.keys(entities).reduce((acc: any, key) => {
+    const entity = entities[key]
+    if (entity.position && entity.velocity) {
+      acc[key] = {
+        ...entity,
+        velocity: {
+          x: entity.position.x <= 0 ? Math.abs(entity.velocity.x) : entity.velocity.x,
+          y: entity.position.y <= 0 ? Math.abs(entity.velocity.y) : entity.velocity.y,
+        },
+      }
+    } else {
+      acc[key] = entity
+    }
+    return acc
+  }, {})
+}
+
+const SYSTEMS = [playerControlSystem, physicsSystem, collisionSystem]
+
+const INITIAL_ENTITIES = {
+  player: {
+    position: { x: 100, y: 100 },
+    velocity: { x: 0, y: 0 },
+    color: "#00ff00",
+    size: 30,
+    renderer: EntityRenderer,
+  },
+  enemy1: {
+    position: { x: 80, y: 200 },
+    velocity: { x: 0, y: 0 },
+    color: "#ff0000",
+    size: 20,
+    renderer: EntityRenderer,
+  },
+  enemy2: {
+    position: { x: 220, y: 300 },
+    velocity: { x: 0, y: 0 },
+    color: "#ff0000",
+    size: 20,
+    renderer: EntityRenderer,
+  },
 }
 
 // Main GameView component
 export function GameView() {
-  const [entities, setEntities] = React.useState<Entity[]>([
-    createPlayer(),
-    createEnemy("enemy1"),
-    createEnemy("enemy2"),
-    ])
-
   const { width, height } = Dimensions.get("window")
+  const gameEngineRef = React.useRef<any>(null)
 
-  useEffect(() => {
-      // Add touch controls for mobile
-    const handleTouchStart = (e: any) => {
-      const touch = e.touches[0]
-      setEntities((prev) =>
-        prev.map((entity) => {
-          if (entity.id === "player") {
-            return {
-                ...entity,
-              velocity: {
-                x: touch.clientX < width / 2 ? -5 : 5,
-                y: touch.clientY < height / 2 ? -5 : 5,
-                },
-              }
-            }
-          return entity
-          }),
-        )
-     }
+  const handleTouchStart = useCallback(() => {
+    gameEngineRef.current?.dispatch({ type: "player-move", velocity: { x: -5, y: -5 } })
+  }, [])
 
-    const handleTouchEnd = () => {
-      setEntities((prev) =>
-        prev.map((entity) => {
-          if (entity.id === "player") {
-            return {
-                ...entity,
-              velocity: { x: 0, y: 0 },
-              }
-            }
-          return entity
-          }),
-        )
-     }
-
-    return () => {
-        // Cleanup if needed
-      }
-    }, [width, height])
+  const handleTouchEnd = useCallback(() => {
+    gameEngineRef.current?.dispatch({ type: "player-stop" })
+  }, [])
 
   return (
-      <View style={styles.gameContainer}>
-        <GameEngine
-        systems={[physicsSystem, collisionSystem, renderSystem]}
-        entities={{
-          player: {
-              ...entities[0],
-            render: (entity: Entity) => (
-                <View
-                style={[
-                  styles.entity,
-                    {
-                    backgroundColor: entity.color,
-                    width: entity.size,
-                    height: entity.size,
-                    left: entity.position.x,
-                    top: entity.position.y,
-                    },
-                 ]}
-                />
-              ),
-            },
-          enemy1: {
-              ...entities[1],
-            render: (entity: Entity) => (
-                <View
-                style={[
-                  styles.entity,
-                    {
-                    backgroundColor: entity.color,
-                    width: entity.size,
-                    height: entity.size,
-                    left: entity.position.x,
-                    top: entity.position.y,
-                    },
-                 ]}
-                />
-              ),
-            },
-          enemy2: {
-              ...entities[2],
-            render: (entity: Entity) => (
-                <View
-                style={[
-                  styles.entity,
-                    {
-                    backgroundColor: entity.color,
-                    width: entity.size,
-                    height: entity.size,
-                    left: entity.position.x,
-                    top: entity.position.y,
-                    },
-                 ]}
-                />
-              ),
-            },
-          }}
-        onUpdate={(dt) => {
-          setEntities([
-              { ...entities[0], velocity: { x: 0, y: 0 } },
-              { ...entities[1], velocity: { x: 1, y: 1 } },
-              { ...entities[2], velocity: { x: -1, y: -1 } },
-            ])
-          }}
-        >
-          <View
-          style={[
-            styles.gameArea,
-              {
-              width: Math.min(400, width - 40),
-              height: Math.min(600, height - 200),
-              },
-            ]}
-          >
-            {entities.map((entity) => (
-              <View
-              key={entity.id}
-              style={[
-                styles.entity,
-                  {
-                  backgroundColor: entity.color,
-                  width: entity.size,
-                  height: entity.size,
-                  left: entity.position.x,
-                  top: entity.position.y,
-                  position: "absolute" as const,
-                  },
-                ]}
-              />
-            ))}
-          </View>
-        </GameEngine>
-      </View>
-    )
+    <View style={styles.gameContainer}>
+      <TouchableOpacity
+        style={styles.touchArea}
+        onTouchStart={handleTouchStart}
+        onTouchEnd={handleTouchEnd}
+        activeOpacity={1}
+      />
+      <GameEngine
+        ref={gameEngineRef}
+        style={styles.gameArea}
+        systems={SYSTEMS}
+        entities={INITIAL_ENTITIES}
+      />
+    </View>
+  )
 }
 
 const styles = StyleSheet.create({
   gameContainer: {
     flex: 1,
     backgroundColor: "#1a1a2e",
-    },
+    ...StyleSheet.absoluteFillObject,
+  },
+  touchArea: {
+    position: "absolute",
+    top: 0,
+    left: 0,
+    right: 0,
+    bottom: 0,
+  },
   gameArea: {
-    width: 400,
-    height: 600,
+    ...StyleSheet.absoluteFillObject,
     backgroundColor: "#16213e",
-    marginHorizontal: "auto",
-    marginTop: 20,
-    borderRadius: 8,
-    overflow: "hidden",
-    },
+  },
   entity: {
     position: "absolute" as const,
     borderRadius: 4,
-    },
+  },
 })

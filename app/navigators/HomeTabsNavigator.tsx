@@ -1,6 +1,7 @@
 import React from "react"
 import { View } from "react-native"
 import { createBottomTabNavigator } from "@react-navigation/bottom-tabs"
+import { useSafeAreaInsets } from "react-native-safe-area-context"
 import { useAppTheme } from "@/theme/context"
 import { Ionicons } from "@expo/vector-icons"
 
@@ -33,7 +34,6 @@ const CustomTabIcon: React.FC<CustomTabIconProps> = ({ focused, icon, pressedIco
     <View style={themed({
       alignItems: "center",
       justifyContent: "center",
-      paddingVertical: 8,
     })}>
       {focused ? pressedIcon : icon}
     </View>
@@ -49,6 +49,7 @@ export function HomeTabsNavigator() {
     theme: { colors },
     themed,
   } = useAppTheme()
+  const { bottom } = useSafeAreaInsets()
 
   return (
     <Tab.Navigator
@@ -56,9 +57,8 @@ export function HomeTabsNavigator() {
         headerShown: false,
         tabBarStyle: themed({
           backgroundColor: colors.background,
-          height: 64,
-          paddingBottom: 8,
-          paddingTop: 8,
+          height: 64 + bottom,
+          paddingBottom: bottom,
         }),
         tabBarActiveTintColor: colors.tint,
         tabBarInactiveTintColor: colors.textDim,
@@ -144,7 +144,7 @@ export function HomeTabsNavigator() {
         component={HiddenScreen}
         options={({ route }) => ({
           tabBarIcon: ({ color, size }) => {
-            const icon = Icon.from("lock")
+            const icon = Icon.from("lock-closed")
             const pressedIcon = Icon.from("lock-open")
 
             return (

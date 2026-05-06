@@ -1,5 +1,4 @@
-import { View, Text, ViewStyle, TextStyle } from "react-native"
-import { Ionicons } from "@expo/vector-icons"
+import { View, ViewStyle, StyleSheet } from "react-native"
 import { NativeStackScreenProps } from "@react-navigation/native-stack"
 import { GameStackParamList } from "@/navigators/GameStackNavigator"
 import { useAppTheme } from "@/theme/context"
@@ -9,23 +8,18 @@ import { GameView } from "@/components/GameView"
 type Props = NativeStackScreenProps<GameStackParamList, "GameScreen">
 
 export default function GameScreen({ navigation }: Props) {
-  const {
-    themed,
-    theme: { colors },
-  } = useAppTheme()
+  const { themed } = useAppTheme()
 
   return (
     <View style={themed($container)}>
       <GameView />
-      <View style={themed($content)}>
-        <Ionicons name="game-controller-outline" size={48} color={colors.tint} />
-        <Text style={themed($title)}>Game</Text>
+      <View style={$overlay} pointerEvents="box-none">
+        <Button
+          text="Go Back"
+          onPress={() => navigation.goBack()}
+          style={themed($button)}
+        />
       </View>
-      <Button
-        text="Go Back"
-        onPress={() => navigation.goBack()}
-        style={themed($button)}
-      />
     </View>
   )
 }
@@ -34,18 +28,13 @@ const $container: ViewStyle = {
   flex: 1,
 }
 
-const $content: ViewStyle = {
-  flex: 1,
-  justifyContent: "center",
+const $overlay: ViewStyle = {
+  ...StyleSheet.absoluteFillObject,
+  justifyContent: "flex-end",
   alignItems: "center",
-}
-
-const $title: TextStyle = {
-  fontSize: 24,
-  fontWeight: "bold",
+  paddingBottom: 40,
 }
 
 const $button: ViewStyle = {
-  marginTop: 20,
   alignSelf: "center",
 }
