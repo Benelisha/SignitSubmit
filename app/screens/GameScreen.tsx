@@ -1,34 +1,74 @@
 import { useCallback, useEffect, useRef, useState } from "react"
-import { View, ViewStyle, StyleSheet, BackHandler, Pressable } from "react-native"
+import { View, ViewStyle, StyleSheet, BackHandler, TextStyle, ScrollView } from "react-native"
 import { NativeStackScreenProps } from "@react-navigation/native-stack"
 import { useFocusEffect } from "@react-navigation/native"
+import { SvgXml } from "react-native-svg"
 import { GameStackParamList } from "@/navigators/GameStackNavigator"
 import { useAppTheme } from "@/theme/context"
-import { Button } from "@/components/UI/Button"
-import { GameView } from "@/components/GameView"
-import { Dice } from "@/components/Dice"
+import { ActionButton, Button } from "@/components/UI/Button"
+
+import { TextField } from "@/components/UI/TextField"
+import { Text } from "@/components/UI/Text"
+import { geminiService } from "@/services/gemini/geminiService"
+import { GeminiProblem } from "@/services/gemini/types"
 
 type Props = NativeStackScreenProps<GameStackParamList, "GameScreen">
 
-// Render the battle game screen with overlay controls and dice actions.
+interface GeneratedSvgItem {
+  id: string
+  prompt: string
+  svgMarkup: string
+}
+
+function appendLog(currentLogs: string[], message: string) {
+  const nextLogs = [...currentLogs, message.length > 260 ? `${message.slice(0, 260)}...` : message]
+  return nextLogs.slice(-18)
+}
+
+function getGeminiErrorText(problem: GeminiProblem) {
+  switch (problem.kind) {
+    case "empty-prompt":
+      return "Type a prompt first."
+    case "missing-api-key":
+      return "Missing Gemini API key. Add it to config.dev/config.prod."
+    case "invalid-svg":
+      return "Gemini returned an invalid SVG. Try a different prompt."
+    case "invalid-scene":
+      return "Gemini returned an invalid scene layout. Try again."
+    case "timeout":
+      return "Request timed out. Please try again."
+    case "cannot-connect":
+      return "Cannot connect right now. Check network and try again."
+    case "rate-limited":
+      return "Rate limit reached. Wait a moment and retry."
+    case "unauthorized":
+      return "Unauthorized request. Check API key and model access."
+    case "forbidden":
+      return "Request forbidden for this key/model."
+    case "not-found":
+      return "Gemini model or endpoint was not found. Check the configured model name."
+    case "server":
+      return "Gemini server error. Please retry."
+    case "rejected":
+      return "Gemini rejected this request. Try a different prompt."
+    case "unknown":
+    case "bad-data":
+      return "Unexpected response from Gemini."
+    default:
+      return "Something went wrong."
+  }
+}
+
+// Render the battle game screen with an SVG prompt workflow over the scene.
 export default function GameScreen({ navigation }: Props) {
   const { themed } = useAppTheme()
-  // Current face value shown for each bottom dice.
-  const [diceValues, setDiceValues] = useState<number[]>([6, 2, 3, 4, 1])
-  // Bumping one id triggers roll animation only for that specific dice.
-  const [diceRollIds, setDiceRollIds] = useState<number[]>([0, 0, 0, 0, 0])
-  const attackTimersRef = useRef<Array<ReturnType<typeof setTimeout>>>([])
-
-  // Clear and reset pending attack animation timers to avoid stale updates.
-  const clearAttackTimers = useCallback(() => {
-    attackTimersRef.current.forEach((timer) => clearTimeout(timer))
-    attackTimersRef.current = []
-  }, [])
-
-  // Dispose queued timers when the screen unmounts.
-  useEffect(() => {
-    return () => clearAttackTimers()
-  }, [clearAttackTimers])
+  const [promptText, setPromptText] = useState("")
+  const [generatedSvgs, setGeneratedSvgs] = useState<GeneratedSvgItem[]>([])
+  const [generationLogs, setGenerationLogs] = useState<string[]>([])
+  const [errorText, setErrorText] = useState<string | null>(null)
+  const [isGenerating, setIsGenerating] = useState(false)
+  const galleryScrollRef = useRef<ScrollView>(null)
+  const previousSceneCountRef = useRef(0)
 
   // Block Android hardware back presses while this screen is focused.
   useFocusEffect(
@@ -38,54 +78,47 @@ export default function GameScreen({ navigation }: Props) {
     }, []),
   )
 
-  // Roll all five dice with a short stagger to create an attack animation.
-  const handleAttack = useCallback(() => {
-    clearAttackTimers()
-    for (let index = 0; index < 5; index++) {
-      const timer = setTimeout(() => {
-        setDiceValues((prev) => {
-          const updated = [...prev]
-          const previousValue = updated[index]
-          let nextValue = Math.floor(Math.random() * 6) + 1
-          if (nextValue === previousValue) {
-            nextValue = (nextValue % 6) + 1
-          }
-          updated[index] = nextValue
-          return updated
-        })
-        setDiceRollIds((prev) => {
-          const updated = [...prev]
-          updated[index] = updated[index] + 1
-          return updated
-        })
-      }, index * 60)
+  useEffect(() => {
+    if (!generatedSvgs.length || generatedSvgs.length === previousSceneCountRef.current) return
 
-      attackTimersRef.current.push(timer)
+    requestAnimationFrame(() => {
+      galleryScrollRef.current?.scrollToEnd({ animated: true })
+    })
+
+    previousSceneCountRef.current = generatedSvgs.length
+  }, [generatedSvgs.length])
+
+  const handleGenerateSvg = useCallback(async () => {
+    const promptTrimmed = promptText.trim()
+    if (!promptTrimmed) return
+
+    setErrorText(null)
+    setIsGenerating(true)
+    setGenerationLogs((current) => appendLog(current, `prompt -> ${promptTrimmed}`))
+
+    const result = await geminiService.generateSvgFromPrompt(promptTrimmed)
+
+    if (result.kind === "ok") {
+      setGeneratedSvgs((current) => [
+        ...current,
+        {
+          id: `${Date.now()}-${current.length}`,
+          prompt: promptTrimmed,
+          svgMarkup: result.svgMarkup,
+        },
+      ])
+      setGenerationLogs((current) => appendLog(current, `svg returned -> ${result.svgMarkup}`))
+      setPromptText("")
+    } else {
+      setGenerationLogs((current) => appendLog(current, `svg error -> ${result.kind}`))
+      setErrorText(getGeminiErrorText(result))
     }
-  }, [clearAttackTimers])
 
-  // Re-roll a single selected dice and ensure the value changes.
-  const handleSingleDicePress = useCallback((index: number) => {
-    setDiceValues((prev) => {
-      const updated = [...prev]
-      const previousValue = updated[index]
-      let nextValue = Math.floor(Math.random() * 6) + 1
-      if (nextValue === previousValue) {
-        nextValue = (nextValue % 6) + 1
-      }
-      updated[index] = nextValue
-      return updated
-    })
-    setDiceRollIds((prev) => {
-      const updated = [...prev]
-      updated[index] = updated[index] + 1
-      return updated
-    })
-  }, [])
+    setIsGenerating(false)
+  }, [promptText])
 
   return (
     <View style={themed($container)}>
-      <GameView diceValues={diceValues} diceRollIds={diceRollIds} />
       <View style={$overlay} pointerEvents="box-none">
         <View style={themed($topLeftContainer)}>
           <Button
@@ -95,24 +128,70 @@ export default function GameScreen({ navigation }: Props) {
           />
         </View>
 
-        <View style={themed($bottomControls)}>
-          <View style={$diceRow}>
-            {diceValues.map((diceValue, index) => (
-              <Pressable
-                key={index}
-                onPress={() => handleSingleDicePress(index)}
-                style={$diceItem}
-              >
-                <Dice style={$diceFill} value={diceValue} rollId={diceRollIds[index]} />
-              </Pressable>
-            ))}
-          </View>
+        <View style={themed($centerSection)}>
+          <ScrollView
+            ref={galleryScrollRef}
+            horizontal
+            showsHorizontalScrollIndicator={false}
+            contentContainerStyle={themed($galleryContent)}
+            style={themed($galleryScroll)}
+          >
+            {generatedSvgs.length ? (
+              generatedSvgs.map((item) => (
+                <View key={item.id} style={themed($svgCard)}>
+                  <View style={themed($svgPreview)}>
+                    <SvgXml xml={item.svgMarkup} width="100%" height="100%" />
+                  </View>
+                  <Text text={item.prompt} style={themed($promptCaption)} numberOfLines={2} />
+                </View>
+              ))
+            ) : (
+              <View style={themed($emptyCard)}>
+                <Text
+                  text="Each generated SVG will appear here. Swipe sideways to review them."
+                  style={themed($placeholderText)}
+                />
+              </View>
+            )}
+          </ScrollView>
+        </View>
 
-          <Button
-            text="Attack"
-            onPress={handleAttack}
-            style={themed($button)}
+        <View style={themed($bottomControls)}>
+          <TextField
+            value={promptText}
+            onChangeText={setPromptText}
+            placeholder="Describe one subject, for example: Apple or Dog"
+            editable={!isGenerating}
+            autoCapitalize="none"
+            autoCorrect={false}
+            returnKeyType="send"
+            onSubmitEditing={() => {
+              if (!isGenerating) void handleGenerateSvg()
+            }}
+            containerStyle={themed($promptField)}
           />
+
+          {!!errorText && <Text text={errorText} style={themed($errorText)} />}
+
+          {!!generationLogs.length && (
+            <View style={themed($logsPanel)}>
+              <Text text="Generation Log" style={themed($logsTitle)} />
+              <ScrollView nestedScrollEnabled style={themed($logsScroll)}>
+                {generationLogs.map((logLine, index) => (
+                  <Text key={`${index}-${logLine.slice(0, 12)}`} text={logLine} style={themed($logLine)} />
+                ))}
+              </ScrollView>
+            </View>
+          )}
+
+          <View style={themed($sendButtonWrap)}>
+            <ActionButton
+              text={isGenerating ? "Generating..." : "Send"}
+              onPress={() => void handleGenerateSvg()}
+              disabled={isGenerating || !promptText.trim()}
+              style={themed($button)}
+            />
+          </View>
         </View>
       </View>
     </View>
@@ -141,29 +220,103 @@ const $backButton: ViewStyle = {
 
 const $bottomControls: ViewStyle = {
   alignItems: "center",
+  paddingHorizontal: 16,
+  paddingBottom: 24,
 }
 
-const $diceRow: ViewStyle = {
-  transform: [{ translateX: -13 }],
-  marginBottom: 12,
-  width: "100%",
-  flexDirection: "row",
+const $centerSection: ViewStyle = {
+  flex: 1,
   justifyContent: "center",
+}
+
+const $galleryScroll: ViewStyle = {
+  width: "100%",
+}
+
+const $galleryContent: ViewStyle = {
+  alignItems: "center",
+  paddingHorizontal: 16,
+  gap: 16,
+}
+
+const $svgCard: ViewStyle = {
+  width: 320,
   alignItems: "center",
 }
 
-const $diceItem: ViewStyle = {
+const $svgPreview: ViewStyle = {
+  width: "100%",
+  height: 320,
+  borderWidth: 1,
+  borderRadius: 28,
+  borderColor: "#F8C25C",
+  backgroundColor: "#FFF7ED",
   alignItems: "center",
   justifyContent: "center",
-  width: 68,
-  height: 68,
-  marginHorizontal: 2,
+  padding: 18,
 }
 
-const $diceFill: ViewStyle = {
+const $emptyCard: ViewStyle = {
+  width: 320,
+  minHeight: 240,
+  borderWidth: 1,
+  borderRadius: 28,
+  borderColor: "#D1D5DB",
+  backgroundColor: "#FFFFFF",
+  alignItems: "center",
+  justifyContent: "center",
+  paddingHorizontal: 20,
+}
+
+const $placeholderText: TextStyle = {
+  textAlign: "center",
+  color: "#6B7280",
+}
+
+const $promptCaption: TextStyle = {
+  marginTop: 10,
+  textAlign: "center",
+  color: "#5B4A25",
+}
+
+const $promptField: ViewStyle = {
   width: "100%",
-  height: "100%",
-  alignSelf: "center",
+}
+
+const $logsPanel: ViewStyle = {
+  width: "100%",
+  marginTop: 10,
+  borderRadius: 18,
+  borderWidth: 1,
+  borderColor: "#E5E7EB",
+  backgroundColor: "rgba(255,255,255,0.92)",
+  padding: 12,
+}
+
+const $logsTitle: TextStyle = {
+  color: "#5B4A25",
+  marginBottom: 6,
+}
+
+const $logsScroll: ViewStyle = {
+  maxHeight: 120,
+}
+
+const $logLine: TextStyle = {
+  color: "#4B5563",
+  marginBottom: 4,
+}
+
+const $errorText: TextStyle = {
+  marginTop: 8,
+  color: "#B91C1C",
+  textAlign: "center",
+}
+
+const $sendButtonWrap: ViewStyle = {
+  marginTop: 10,
+  width: "100%",
+  alignItems: "center",
 }
 
 const $button: ViewStyle = {
