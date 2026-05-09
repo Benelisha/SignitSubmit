@@ -7,6 +7,16 @@ export interface GeminiConfig {
   timeout: number
 }
 
+export interface GeminiGenerateContentResponse {
+  candidates?: Array<{
+    content?: {
+      parts?: Array<{
+        text?: string
+      }>
+    }
+  }>
+}
+
 export interface SceneAssetPlacement {
   x: number
   y: number
@@ -88,16 +98,6 @@ export interface GeminiSceneGenerationHooks {
   onAssetGenerated?: (asset: GeminiSceneAssetDefinition, scene: GeminiGeneratedScene) => void
   onAssetFailed?: (assetId: string, scene: GeminiGeneratedScene) => void
   onLog?: (message: string) => void
-}
-
-export interface GeminiGenerateContentResponse {
-  candidates?: Array<{
-    content?: {
-      parts?: Array<{
-        text?: string
-      }>
-    }
-  }>
 }
 
 export type GeminiProblem =
