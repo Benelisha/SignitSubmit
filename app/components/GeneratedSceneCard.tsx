@@ -27,11 +27,9 @@ function parseStageViewBox(stageViewBox: string) {
 }
 
 function getItemTransform(item: GeminiSceneItem) {
-  const transforms: NonNullable<ViewStyle["transform"]> = []
-  if (item.placement.rotation) {
-    transforms.push({ rotate: `${item.placement.rotation}deg` })
-  }
-  return transforms
+  if (!item.placement.rotation) return undefined
+
+  return [{ rotate: `${item.placement.rotation}deg` }]
 }
 
 function formatStageLabel(stage?: GeminiSceneAssetStage) {

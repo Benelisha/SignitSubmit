@@ -17,6 +17,8 @@ export interface GeminiGenerateContentResponse {
   }>
 }
 
+export type GeminiSvgGeneratorKind = "character" | "background" | "object"
+
 export interface SceneAssetPlacement {
   x: number
   y: number

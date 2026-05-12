@@ -8,7 +8,7 @@
 export default {
   API_URL: "https://api.rss2json.com/v1/",
   // NOTE: This is intentionally client-side for this prototype and is not secure for production.
-  GEMINI_API_KEY: "AIzaSyCk8_uc6dHYvXbdnNnPB4G3uSFp85uY0NY",
+  GEMINI_API_KEY: "AIzaSyDs3s4c36MFbumedxjcMoQ-1tNd0SHRd4U",
   GEMINI_BASE_URL: "https://generativelanguage.googleapis.com/v1beta/",
   GEMINI_MODEL: "gemini-2.5-flash",
 }
