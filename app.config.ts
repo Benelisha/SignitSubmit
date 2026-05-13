@@ -16,6 +16,9 @@ import "tsx/cjs"
  */
 export default ({ config }: { config: ExpoConfig }): Partial<ExpoConfig> => {
   const existingPlugins = config.plugins ?? []
+  const plugins = existingPlugins.includes("expo-asset")
+    ? existingPlugins
+    : [...existingPlugins, "expo-asset"]
 
   return {
     ...config,
@@ -36,6 +39,6 @@ export default ({ config }: { config: ExpoConfig }): Partial<ExpoConfig> => {
         ],
       },
     },
-    plugins: [...existingPlugins],
+    plugins,
   }
 }

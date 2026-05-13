@@ -3,10 +3,12 @@ import { HomeTabsParamList } from "./HomeTabsNavigator"
 import { useAppTheme } from "@/theme/context"
 import { HomeTabsNavigator } from "./HomeTabsNavigator"
 import GameScreen from "@/screens/GameScreen"
+import StoryScreen from "@/screens/StoryScreen"
 
 export type GameStackParamList = {
   HomeTabs: undefined
   GameScreen: undefined
+  StoryScreen: undefined
 }
 
 const Stack = createNativeStackNavigator<GameStackParamList>()
@@ -25,8 +27,9 @@ export function GameStackNavigator() {
           backgroundColor: colors.background,
           },
         }}
-      initialRouteName="HomeTabs"
+      initialRouteName="StoryScreen"
       >
+       <Stack.Screen name="StoryScreen" component={StoryScreen} />
        <Stack.Screen name="HomeTabs" component={HomeTabsNavigator} />
          <Stack.Screen
            name="GameScreen"
